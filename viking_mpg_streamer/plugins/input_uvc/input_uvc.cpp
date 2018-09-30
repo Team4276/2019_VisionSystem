@@ -110,7 +110,7 @@ void help(void) {
     int i;
 
     fprintf(stderr, " ---------------------------------------------------------------\n" \
-    " Help for input plugin..: "INPUT_PLUGIN_NAME"\n" \
+    " Help for input plugin..: \"INPUT_PLUGIN_NAME\"\n" \
     " ---------------------------------------------------------------\n" \
     " The following parameters can be passed to this plugin:\n\n" \
     " [-d | --device ].......: video device to open (your camera)\n" \
