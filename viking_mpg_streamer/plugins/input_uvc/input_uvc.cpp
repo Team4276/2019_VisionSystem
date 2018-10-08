@@ -62,7 +62,7 @@
 #include "viking_cv/CSettingList.h"
 #include "viking_cv/dbgMsg.h"
 
-CFrameGrinder frameGrinder;
+CFrameGrinder* g_pFrameGrinder;
 
 // Global shutdown flag is set when user typed Ctrl-C
 extern bool g_isShutdown;
@@ -152,7 +152,7 @@ Return Value: 0 if everything is fine
 extern "C" {
 
     int input_init(input_parameter *param, int id) {
-        char *dev = (char*) "/dev/video0";
+        char *dev = NULL;
         char *s = NULL;
         int width = 640, height = 480, fps = 5, format = V4L2_PIX_FMT_MJPEG, i;
         /* initialize the mutes variable */
@@ -384,16 +384,26 @@ extern "C" {
     void setCameraExposure()
     {
         int rv = system("v4l2-ctl -d /dev/video0 --set-ctrl exposure_auto=1");
+        rv = system("v4l2-ctl -d /dev/video1 --set-ctrl exposure_auto=1");
         usleep(1000000);
                 
         char buf2[128] = {0};
         strcpy(buf2, "v4l2-ctl -d /dev/video0 --set-ctrl exposure_absolute=");
         strcat(buf2, g_settings.getSettingText(CSetting::SETTING_EXPOSURE).c_str());
         int rv2 = system(buf2);
+        if (rv2 != 0) 
+        {
+            printf("rv2(1) = %d,  %s\n", rv2, buf2);
+        }
+       
+        buf2[0] = 0;
+        strcpy(buf2, "v4l2-ctl -d /dev/video1 --set-ctrl exposure_absolute=");
+        strcat(buf2, g_settings.getSettingText(CSetting::SETTING_EXPOSURE).c_str());
+        rv2 = system(buf2);
         usleep(1000000);
         if (rv2 != 0) 
         {
-            printf("rv2 = %d,  %s\n", rv2, buf2);
+            printf("rv2(2) = %d,  %s\n", rv2, buf2);
         }
     }
 
@@ -414,9 +424,7 @@ extern "C" {
         int height = VIEW_PIXEL_Y_HEIGHT;
         IplImage * img = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3); // obraz OpenCV
 #endif
-
-        frameGrinder.init();
-
+        
 #ifdef TEST_USE_JPEGS_NOT_CAMERA 
         std::string sBasePath = "/home/";
         sBasePath += HOME_NAME;
@@ -450,7 +458,7 @@ extern "C" {
             }
 
 #ifdef TEST_USE_JPEGS_NOT_CAMERA 
-            if (frameGrinder.safeGetFreeFrame(&pFrame)) {
+            if (g_pFrameGrinder->safeGetFreeFrame(&pFrame)) {
                 if (toggle) {
                     pFrame->m_frame = frame1;
                 } else {
@@ -458,12 +466,12 @@ extern "C" {
                 }
                 toggle = (!toggle);
                 if (!pFrame->m_frame.empty()) {
-                    frameGrinder.safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT);
+                    g_pFrameGrinder->safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT);
                 } else {
                     dbgMsg_s("Frame is empty\n");
-                    frameGrinder.safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_FREE);
+                    g_pFrameGrinder->safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_FREE);
                 }
-                frameGrinder.m_testMonitor.m_nTasksDone[CTestMonitor::TASK_DONE_CAMERA]++;
+                g_pFrameGrinder->m_testMonitor.m_nTasksDone[CTestMonitor::TASK_DONE_CAMERA]++;
             }
 
 #else
@@ -525,18 +533,34 @@ extern "C" {
 
 #else // #ifndef NO_CV_JUST_STREAM_THE_CAMERA
 
-            if (frameGrinder.safeGetFreeFrame(&pFrame)) {
+            if (g_pFrameGrinder->safeGetFreeFrame(&pFrame)) {
                 std::vector<uchar> vectordata(pcontext->videoIn->tmpbuffer, pcontext->videoIn->tmpbuffer + (height * width));
                 cv::Mat data_mat(vectordata, false);
                 cv::Mat image(cv::imdecode(data_mat, 1)); //put 0 if you want greyscale
                 pFrame->m_frame = image;
                 if (!pFrame->m_frame.empty()) {
-                    frameGrinder.safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT);
+                    if(0 == strcmp(pcontext->videoIn->videodevice, "/dev/video1")) 
+                    {
+                        CTestMonitor::getTicks(&pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_CAM2]);
+                        g_pFrameGrinder->safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_CAM2);                       
+                    }
+                    else
+                    {
+                        CTestMonitor::getTicks(&pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_CAM1]);
+                        g_pFrameGrinder->safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_CAM1);                       
+                    }
                 } else {
                     dbgMsg_s("Frame is empty\n");
-                    frameGrinder.safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_FREE);
+                    g_pFrameGrinder->safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_FREE);
                 }
-                frameGrinder.m_testMonitor.m_nTasksDone[CTestMonitor::TASK_DONE_CAMERA]++;
+                if(0 == strcmp(pcontext->videoIn->videodevice, "/dev/video1")) 
+                {
+                    g_pFrameGrinder->m_testMonitor.m_nTasksDone[CTestMonitor::TASK_DONE_CAM2]++;
+                }
+                else
+                {
+                    g_pFrameGrinder->m_testMonitor.m_nTasksDone[CTestMonitor::TASK_DONE_CAM1]++;
+                }
             }
 
 #endif  // #ifndef NO_CV_JUST_STREAM_THE_CAMERA
@@ -560,6 +584,13 @@ extern "C" {
         if (cams[id].pglobal->in[id].buf == NULL) {
             fprintf(stderr, "could not allocate memory\n");
             exit(EXIT_FAILURE);
+        }
+        
+        // Init CFrameGrinder only once, even if stereo cameras
+        if(g_pFrameGrinder == NULL)
+        {
+            g_pFrameGrinder = new CFrameGrinder();
+            g_pFrameGrinder->init();
         }
 
         DBG("launching camera thread #%02d\n", id);

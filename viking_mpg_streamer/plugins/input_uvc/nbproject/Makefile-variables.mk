@@ -15,13 +15,13 @@ CND_PACKAGE_DIR_Debug=dist/Debug/GNU-Linux-x86/package
 CND_PACKAGE_NAME_Debug=libinputuvc.so.tar
 CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux-x86/package/libinputuvc.so.tar
 # Release configuration
-CND_PLATFORM_Release=GNU-Linux-x86
-CND_ARTIFACT_DIR_Release=../../dist/Release/GNU-Linux-x86
-CND_ARTIFACT_NAME_Release=input_uvc.so
-CND_ARTIFACT_PATH_Release=../../dist/Release/GNU-Linux-x86/input_uvc.so
-CND_PACKAGE_DIR_Release=dist/Release/GNU-Linux-x86/package
-CND_PACKAGE_NAME_Release=libinputuvc.so.tar
-CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux-x86/package/libinputuvc.so.tar
+CND_PLATFORM_Release=None-Windows
+CND_ARTIFACT_DIR_Release=../../dist/Release/None-Windows
+CND_ARTIFACT_NAME_Release=input_uvc.dll
+CND_ARTIFACT_PATH_Release=../../dist/Release/None-Windows/input_uvc.dll
+CND_PACKAGE_DIR_Release=dist/Release/None-Windows/package
+CND_PACKAGE_NAME_Release=libinputuvc.dll.tar
+CND_PACKAGE_PATH_Release=dist/Release/None-Windows/package/libinputuvc.dll.tar
 #
 # include compiler specific variables
 #

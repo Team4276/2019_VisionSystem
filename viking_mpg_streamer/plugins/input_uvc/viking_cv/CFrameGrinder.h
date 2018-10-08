@@ -29,7 +29,7 @@
 /*******************************************************************************************/
 
 
-#define NUMBER_OF_FRAMES_FOR_QUEUE 8
+#define NUMBER_OF_FRAMES_FOR_QUEUE 16
 
 class CFrameGrinder
 {
@@ -58,5 +58,6 @@ public:
 protected:
     pthread_mutex_t m_mutexQueue; // Allow only one thread at a time to add or remove from queues
     pthread_mutexattr_t m_mutexattrQueue;
+    pthread_t m_cam_queue_thread;
     pthread_t m_blob_detect_thread;
 };

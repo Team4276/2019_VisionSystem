@@ -40,6 +40,8 @@ public:
     typedef enum
     {
         FRAME_QUEUE_TYPE_UNKNOWN,
+        FRAME_QUEUE_CAM1,  
+        FRAME_QUEUE_CAM2,  
         FRAME_QUEUE_WAIT_FOR_BLOB_DETECT,
         FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT,
         FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT,
@@ -54,15 +56,19 @@ public:
     void updateAnnotationInfo(
             const CUpperGoalRectangle& upperGoalRectangle);
     void annotate();
-
+    
+    static std::string queueTypeToText(FRAME_QUEUE_TYPE val);
+    
     cv::Mat m_frame;
     cv::Mat m_filteredFrame;
-    CTargetInfo m_targetInfo;
-
-    CUpperGoalRectangle m_upperGoalRectangle;
 
     struct timespec m_timeAddedToQueue[CVideoFrame::NUMBER_OF_FRAME_QUEUES];
     struct timespec m_timeRemovedFromQueue[CVideoFrame::NUMBER_OF_FRAME_QUEUES];
+
+    CVideoFrame* m_pCameraVideoFrame2;
+   
+    CTargetInfo m_targetInfo;
+    CUpperGoalRectangle m_upperGoalRectangle;
 
     std::vector<uchar> m_outbuf;
     std::vector<int> m_params;

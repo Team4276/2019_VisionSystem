@@ -101,7 +101,8 @@ void CTestMonitor::init()
 
     m_nIntervalisUpperGoalFound = 0;
     m_avgUpperGoalRectangle.init();
-    m_nCountTestInterval = 0;
+    m_nCountStereoFramesInThisInterval = 0;
+    m_nCountMonoFramesInThisInterval = 0;
     memset(&m_avgElapsedSeconds, 0, sizeof (double)*NUMBER_OF_TIME_IN_TASK);
     memset(&m_savedElapsedSeconds, 0, sizeof (double)*NUMBER_OF_TIME_IN_TASK);
     m_avgTimeBetweenCameraFramesMilliseconds = 0;
@@ -318,7 +319,7 @@ void CTestMonitor::monitorQueueTimesBeforeReturnToFreeQueue(CVideoFrame* pFrame,
     unsigned int i = 0;
     double timeIntervalSeconds = 0.0;
     getTicks(&pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_FREE]);
-    if (m_nTasksDone[TASK_DONE_CAMERA] >= NUMBER_OF_SAMPLES_PER_TEST_INTERVAL)
+    if (m_nTasksDone[TASK_DONE_CAM1] >= NUMBER_OF_SAMPLES_PER_TEST_INTERVAL)
     {
         timeIntervalSeconds = getDeltaTimeSeconds(
                 timeAtStartOfInterval,
@@ -326,7 +327,7 @@ void CTestMonitor::monitorQueueTimesBeforeReturnToFreeQueue(CVideoFrame* pFrame,
         timeAtStartOfInterval = pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_FREE];
         if (m_nIntervalisUpperGoalFound == 0)
         {
-            sLine += "Upper goal not found\n";
+            sLine += "Upper goal not found,     ";
         }
         else
         {
@@ -337,8 +338,20 @@ void CTestMonitor::monitorQueueTimesBeforeReturnToFreeQueue(CVideoFrame* pFrame,
             sLine += numberToText(m_nIntervalisUpperGoalFound);
             sLine += " in this interval) avg ";
             sLine += m_avgUpperGoalRectangle.displayText();
-            sLine += "\n";
         }
+        if(m_nCountStereoFramesInThisInterval > 0)
+        {
+            sLine += "      Stereo frames in this interval: ";
+            sLine += numberToText(m_nCountStereoFramesInThisInterval);
+        }
+        if(m_nCountMonoFramesInThisInterval > 0)
+        {
+            sLine += "      Mono frames in this interval: ";
+            sLine += numberToText(m_nCountMonoFramesInThisInterval);
+        }
+        sLine += "\n";       
+        m_nCountStereoFramesInThisInterval = 0;
+        m_nCountMonoFramesInThisInterval = 0;
 
         for (i = 0; i < NUMBER_OF_TIME_IN_TASK; i++)
         {
@@ -360,8 +373,7 @@ void CTestMonitor::monitorQueueTimesBeforeReturnToFreeQueue(CVideoFrame* pFrame,
         m_nIntervalisUpperGoalFound = 0;
         m_avgUpperGoalRectangle.init();
 
-        m_nCountTestInterval = 0;
-        memset(&m_avgElapsedSeconds, 0, sizeof (unsigned int)*NUMBER_OF_TIME_IN_TASK);
+         memset(&m_avgElapsedSeconds, 0, sizeof (unsigned int)*NUMBER_OF_TIME_IN_TASK);
         m_avgTimeBetweenCameraFramesMilliseconds = 0;
         m_avgLatencyForProcessingFrameMilliseconds = 0;
 
@@ -378,9 +390,15 @@ void CTestMonitor::monitorQueueTimesBeforeReturnToFreeQueue(CVideoFrame* pFrame,
         m_avgUpperGoalRectangle.center.y += pFrame->m_upperGoalRectangle.center.y;
         m_avgUpperGoalRectangle.angle += pFrame->m_upperGoalRectangle.angle;
     }
+   
+    m_avgElapsedSeconds[TIME_IN_TASK_PLACEHOLDER1] = 0.0;
+    m_avgElapsedSeconds[TIME_IN_TASK_PLACEHOLDER2] = 0.0;
+    
     m_avgElapsedSeconds[TIME_IN_TASK_CAMERA] += getDeltaTimeSeconds(
             pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_FREE], // earlier time
             pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT]); // later time
+    
+    m_avgElapsedSeconds[TIME_IN_TASK_CAMERA_2] = m_avgElapsedSeconds[TIME_IN_TASK_CAMERA];
 
     m_avgElapsedSeconds[TIME_IN_TASK_WAIT_FOR_BLOB_DETECT] += getDeltaTimeSeconds(
             pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT],
@@ -426,7 +444,7 @@ std::string CTestMonitor::displayQueueTimes(double timeIntervalSeconds, CFrameGr
 {
     double dTemp;
     char buf[256];
-    static std::string initTitles[] = {"Camera", "BlobDetect", "Text", "Browser", "Total", " "};
+    static std::string initTitles[] = {"CAM1", "CAM2", "BlobDetect", "Text", "Browser", "Total", " "};
     std::string sLine, sRet;
 
     sLine = "";

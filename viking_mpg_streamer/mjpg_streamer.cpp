@@ -41,8 +41,23 @@
 #include "utils.h"
 #include "mjpg_streamer.h"
 
+// All this is included just to support stereo cameras, (Must init CFrameGrinder only once, which for mono camera is OK in input_uvc.so init)
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include "plugins/input_uvc/viking_cv/CUpperGoalRectangle.h"
+#include "plugins/input_uvc/viking_cv/CTargetInfo.h"
+#include "plugins/input_uvc/viking_cv/CVideoFrame.h"
+#include "plugins/input_uvc/viking_cv/CVideoFrameQueue.h"
+#include "plugins/input_uvc/viking_cv/CConnectionServer.h"
+#include "plugins/input_uvc/viking_cv/CGpioLed.h"
+#include "plugins/input_uvc/viking_cv/CUpperGoalDetector.h"
+#include "plugins/input_uvc/viking_cv/CTestMonitor.h"
+#include "plugins/input_uvc/viking_cv/CFrameGrinder.h"
+
 /* globals */
 static globals global;
+extern CFrameGrinder frameGrinder;
+
 
 /******************************************************************************
 Description.: Display a help message
@@ -184,13 +199,16 @@ int main(int argc, char *argv[])
     int daemon = 0, i;
     size_t tmp = 0;
 
-   input[0] = (char*)"input_uvc.so --resolution 424x240 --fps 30 --device /dev/video0";
-   input[1] = 0;
-   global.incnt = 1;
+    frameGrinder.init();
+            
+    input[0] = (char*)"input_uvc.so --resolution 640x480 --fps 5 --device /dev/video0";
+    input[1] = (char*)"input_uvc.so --resolution 640x480 --fps 5 --device /dev/video1";
+    input[2] = 0;
+    global.incnt = 2;
    
-   output[0] = (char*)"output_http.so --port 5800 -w /usr/local/www";
-   output[1] = 0;
-   global.outcnt = 1;
+    output[0] = (char*)"output_http.so --port 5800 -w /usr/local/www";
+    output[1] = 0;
+    global.outcnt = 1;
 
 
     /* parameter parsing */

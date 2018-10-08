@@ -31,9 +31,9 @@
 #ifndef VIKING_CV_VERSION_H
 #define	VIKING_CV_VERSION_H
 
-#define VERSION_YEAR 2014
-#define VERSION_INTERFACE 2    // Changes when text format transmitted to cRIO and driver station changes
-#define VERSION_BUILD 4        // Resets to zero when VERSION_INTERFACE changes
+#define VERSION_YEAR 2019
+#define VERSION_INTERFACE 1    // Changes when text format transmitted to RoboRio and driver station changes
+#define VERSION_BUILD 0        // Resets to zero when VERSION_INTERFACE changes
 
 #endif	/* VIKING_CV_VERSION_H */
 

@@ -57,6 +57,7 @@ void CVideoFrame::init()
     memset(m_timeRemovedFromQueue, 0, sizeof (struct timespec)*CVideoFrame::NUMBER_OF_FRAME_QUEUES);
     m_outbuf.clear();
     m_params.clear();
+    m_pCameraVideoFrame2 = NULL;
 }
 
 void CVideoFrame::updateAnnotationInfo(const CUpperGoalRectangle& upperGoalRectangle)
@@ -87,3 +88,35 @@ void CVideoFrame::annotate()
         cv::line(m_frame, pt8, m_upperGoalRectangle.center, colorYellow, 3, 4, 0);
     }
 }
+
+std::string CVideoFrame::queueTypeToText(FRAME_QUEUE_TYPE val)
+{
+    switch(val)
+    {
+        case FRAME_QUEUE_TYPE_UNKNOWN:
+            return "FRAME_QUEUE_TYPE_UNKNOWN";
+            
+        case FRAME_QUEUE_CAM1:
+            return "FRAME_QUEUE_CAM1";
+            
+        case FRAME_QUEUE_CAM2:
+            return "FRAME_QUEUE_CAM2";
+            
+        case FRAME_QUEUE_WAIT_FOR_BLOB_DETECT:
+            return "FRAME_QUEUE_WAIT_FOR_BLOB_DETECT";
+            
+        case FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT:
+            return "FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT";
+            
+        case FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT:
+            return "FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT";
+           
+        case FRAME_QUEUE_FREE:
+            return "FRAME_QUEUE_FREE";
+            
+        default: 
+            break;
+    }
+    return "***";
+}
+

@@ -258,6 +258,7 @@ void* browser_server_thread(void* pVoid)
             pFrameGrinder->m_testMonitor.m_nTasksDone[CTestMonitor::TASK_DONE_BROWSER]++;
 
             pFrameGrinder->m_testMonitor.monitorQueueTimesBeforeReturnToFreeQueue(pFrame, pFrameGrinder);
+            //dbgMsg_s("browser_server_thread finished processing, returning frame to FREE queue\n");
             pFrameGrinder->safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_FREE);
         }
     }

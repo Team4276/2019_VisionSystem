@@ -15,13 +15,13 @@ CND_PACKAGE_DIR_Debug=dist/Debug/GNU-Linux-x86/package
 CND_PACKAGE_NAME_Debug=liboutputhttp.so.tar
 CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux-x86/package/liboutputhttp.so.tar
 # Release configuration
-CND_PLATFORM_Release=GNU-Linux-x86
-CND_ARTIFACT_DIR_Release=../../dist/Release/GNU-Linux-x86
-CND_ARTIFACT_NAME_Release=output_http.so
-CND_ARTIFACT_PATH_Release=../../dist/Release/GNU-Linux-x86/output_http.so
-CND_PACKAGE_DIR_Release=dist/Release/GNU-Linux-x86/package
-CND_PACKAGE_NAME_Release=liboutputhttp.so.tar
-CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux-x86/package/liboutputhttp.so.tar
+CND_PLATFORM_Release=None-Windows
+CND_ARTIFACT_DIR_Release=../../dist/Release/None-Windows
+CND_ARTIFACT_NAME_Release=output_http.dll
+CND_ARTIFACT_PATH_Release=../../dist/Release/None-Windows/output_http.dll
+CND_PACKAGE_DIR_Release=dist/Release/None-Windows/package
+CND_PACKAGE_NAME_Release=liboutputhttp.dll.tar
+CND_PACKAGE_PATH_Release=dist/Release/None-Windows/package/liboutputhttp.dll.tar
 #
 # include compiler specific variables
 #

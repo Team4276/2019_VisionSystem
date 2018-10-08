@@ -55,7 +55,8 @@ public:
 
     typedef enum
     {
-        TASK_DONE_CAMERA,
+        TASK_DONE_CAM1,
+        TASK_DONE_CAM2,      
         TASK_DONE_BLOB_DETECT,
         TASK_DONE_TEXT,
         TASK_DONE_BROWSER,
@@ -64,6 +65,8 @@ public:
 
     // Running totals for current test interval
     unsigned int m_nTasksDone[NUMBER_OF_TASK_DONE_TYPES];
+    unsigned int m_nCountStereoFramesInThisInterval;
+    unsigned int m_nCountMonoFramesInThisInterval;
 
 private:
     bool enableVideoCollection(bool bEnable, int framesPerSec, unsigned int height, unsigned int width, int codec);
@@ -80,7 +83,10 @@ private:
 
     typedef enum
     {
+        TIME_IN_TASK_PLACEHOLDER1,
         TIME_IN_TASK_CAMERA,
+        TIME_IN_TASK_PLACEHOLDER2,
+        TIME_IN_TASK_CAMERA_2,
         TIME_IN_TASK_WAIT_FOR_BLOB_DETECT,
         TIME_IN_TASK_BLOB_DETECT,
         TIME_IN_TASK_WAIT_FOR_TEXT_CLIENT,
@@ -108,7 +114,6 @@ private:
     double m_avgElapsedSeconds[NUMBER_OF_TIME_IN_TASK];
     double m_avgTimeBetweenCameraFramesMilliseconds;
     double m_avgLatencyForProcessingFrameMilliseconds;
-    unsigned int m_nCountTestInterval;
 
     // Averages from last test interval
     double m_savedElapsedSeconds[NUMBER_OF_TIME_IN_TASK];

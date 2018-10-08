@@ -72,15 +72,63 @@ void CVideoFrameQueue::addTail(CVideoFrame* pFrame, pthread_mutex_t& mutexQueue)
     pthread_mutex_lock(&mutexQueue);
     nolockAddTail(pFrame);
     pthread_mutex_unlock(&mutexQueue);
+    //dbgMsg_s(CVideoFrame::queueTypeToText(m_eQueueType) + ":    about to issue pthread_cond_broadcast: \n");
     int rc = pthread_cond_broadcast(&m_condThread);
+    if(rc != 0)
+    {
+        std::string sMsg = "addTail() ret from pthread_cond_broadcast: " + numberToText(rc) + "\n";
+        dbgMsg_s(sMsg);
+    }
 }
 
 bool CVideoFrameQueue::removeHead(CVideoFrame** ppFrame, pthread_mutex_t& mutexQueue)
 {
     pthread_mutex_lock(&mutexQueue);
-    bool bRet = nolockRemoveHead(ppFrame);
+    bool bRet = nolockRemoveHead(ppFrame);  // *ppFrame == NULL if no frame removed
     pthread_mutex_unlock(&mutexQueue);
+    if(bRet)
+    {
+        //dbgMsg_s(CVideoFrame::queueTypeToText(m_eQueueType) + ":   after successful removeHead size = " + numberToText(m_queue.size()) + "\n");
+    }
+    else
+    {
+        //dbgMsg_s(CVideoFrame::queueTypeToText(m_eQueueType) + ":   after failed removeHead size = " + numberToText(m_queue.size()) + "\n");
+    }
     return bRet;
+}
+
+std::vector<CVideoFrame*> CVideoFrameQueue::dropOlderAndRemoveHead(CVideoFrame** ppFrame, pthread_mutex_t& mutexQueue)
+{
+    pthread_mutex_lock(&mutexQueue);
+    std::vector<CVideoFrame*> droppedFrames = nolockDropOlderFrames();
+    nolockRemoveHead(ppFrame);  // *ppFrame == NULL if no frame removed
+    pthread_mutex_unlock(&mutexQueue);
+    return droppedFrames;
+}
+
+std::vector<CVideoFrame*> CVideoFrameQueue::nolockDropOlderFrames()
+{
+    std::vector<CVideoFrame*> retVal;
+    // Drop frames older that what we are holding - we want to provide the freshest possible data
+    CVideoFrame* pTempFrame = NULL;
+    while (size() > 1)
+    {
+        if (nolockRemoveHead(&pTempFrame))
+        {
+            //dbgMsg_s(CVideoFrame::queueTypeToText(m_eQueueType) + ":   nolockDropOlderFrames dropped 1 frame\n");
+            m_droppedFrames++;
+            retVal.push_back(pTempFrame);
+        }
+    }
+    //dbgMsg_s(CVideoFrame::queueTypeToText(m_eQueueType) + ":   after nolockDropOlderFrames size = " + numberToText(m_queue.size()) + "\n");
+    return retVal;
+}
+
+std::string CVideoFrameQueue::numberToText(unsigned int n)
+{
+    char buf[128];
+    sprintf(buf, "%d", n);
+    return buf;
 }
 
 bool CVideoFrameQueue::blockingRemoveHead(CVideoFrame** ppFrame, pthread_mutex_t& mutexQueue)
@@ -88,11 +136,19 @@ bool CVideoFrameQueue::blockingRemoveHead(CVideoFrame** ppFrame, pthread_mutex_t
     if (!removeHead(ppFrame, mutexQueue))
     {
         pthread_mutex_lock(&m_mutexThread);
+        //dbgMsg_s(CVideoFrame::queueTypeToText(m_eQueueType) + ":   Before pthread_cond_wait\n");
         int rc = pthread_cond_wait(&m_condThread, &m_mutexThread);
-        pthread_mutex_unlock(&m_mutexThread);
-        if (!removeHead(ppFrame, mutexQueue))
+        if(rc != 0)
         {
-            dbgMsg_s("Woke up after blocking remove, but nothing in the queue\n");
+            std::string sMsg = "blockingRemoveHead() ret from pthread_cond_wait: " + numberToText(rc) + "\n";
+            dbgMsg_s(sMsg);
+        }
+        //dbgMsg_s(CVideoFrame::queueTypeToText(m_eQueueType) + ":   AFTER pthread_cond_wait\n");
+        bool isRemoveOK = nolockRemoveHead(ppFrame);
+        pthread_mutex_unlock(&m_mutexThread);
+        if(!isRemoveOK)
+        {
+            //dbgMsg_s(CVideoFrame::queueTypeToText(m_eQueueType) + ":   Woke up after blocking remove, but nothing in the queue\n");
             *ppFrame = 0;
             return false;
         }
@@ -103,18 +159,38 @@ bool CVideoFrameQueue::blockingRemoveHead(CVideoFrame** ppFrame, pthread_mutex_t
 void CVideoFrameQueue::nolockAddTail(CVideoFrame* pFrame)
 {
     CTestMonitor::getTicks(&pFrame->m_timeAddedToQueue[(int) m_eQueueType]);
+    if(m_eQueueType == CVideoFrame::FRAME_QUEUE_FREE)
+    {
+        if(pFrame->m_pCameraVideoFrame2 != NULL)
+        {
+            m_queue.push_back(pFrame->m_pCameraVideoFrame2);
+            pFrame->m_pCameraVideoFrame2 = NULL;            
+            //dbgMsg_s(CVideoFrame::queueTypeToText(m_eQueueType) + ":   after return m_pCameraVideoFrame2 to FREE queue, size = " + numberToText(m_queue.size()) + "\n");
+        }
+    }
     m_queue.push_back(pFrame);
+    //dbgMsg_s(CVideoFrame::queueTypeToText(m_eQueueType) + ":   after nolockAddTail size = " + numberToText(m_queue.size()) + "\n");
 }
 
 bool CVideoFrameQueue::nolockRemoveHead(CVideoFrame** ppFrame)
 {
     if (m_queue.size() == 0)
     {
-        *ppFrame = 0;
+       //dbgMsg_s(CVideoFrame::queueTypeToText(m_eQueueType) + ":   nolockRemoveHead returned NULL (queue is empty)\n");
+       *ppFrame = 0;
         return false;
     }
     *ppFrame = m_queue.back();
+    if(m_eQueueType == CVideoFrame::FRAME_QUEUE_FREE)
+    {
+        if((*ppFrame)->m_pCameraVideoFrame2 != NULL)
+        {
+            dbgMsg_s("FREE queue remove found non-null pCameraVideoFrame2");
+            (*ppFrame)->m_pCameraVideoFrame2 = NULL;
+        }
+    }
     m_queue.pop_back();
     CTestMonitor::getTicks(&((*ppFrame)->m_timeRemovedFromQueue[(int) m_eQueueType]));
+    //dbgMsg_s(CVideoFrame::queueTypeToText(m_eQueueType) + ":   nolockRemoveHead returned a frame OK\n");
     return true;
 }

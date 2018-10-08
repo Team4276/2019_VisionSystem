@@ -40,9 +40,11 @@ public:
     void init(CVideoFrame::FRAME_QUEUE_TYPE eQueueType);
     void addTail(CVideoFrame* pFrame, pthread_mutex_t& mutexQueue);
     bool removeHead(CVideoFrame** ppFrame, pthread_mutex_t& mutexQueue); // Returns 'false' if queue is empty
+    std::vector<CVideoFrame*> dropOlderAndRemoveHead(CVideoFrame** ppFrame, pthread_mutex_t& mutexQueue); // Returns 'false' if queue is empty
     bool blockingRemoveHead(CVideoFrame** ppFrame, pthread_mutex_t& mutexQueue); // Calling thread will sleep if nothing in the queue
     void nolockAddTail(CVideoFrame* pFrame);
     bool nolockRemoveHead(CVideoFrame** ppFrame); // Returns 'false' if queue is empty
+    std::vector<CVideoFrame*> nolockDropOlderFrames();  // After this the queue is empty or has just one most-recent frame
 
     unsigned int size() const
     {
@@ -51,6 +53,9 @@ public:
 
 public:
     unsigned int m_droppedFrames;
+
+private:
+    std::string numberToText(unsigned int n);
 
 private:
     CVideoFrame::FRAME_QUEUE_TYPE m_eQueueType;

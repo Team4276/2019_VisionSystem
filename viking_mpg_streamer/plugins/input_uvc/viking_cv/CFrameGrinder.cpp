@@ -49,11 +49,13 @@
 #include "CFrameGrinder.h"
 #include "dbgMsg.h"
 
+
 // Global shutdown flag is set when user typed Ctrl-C
 extern bool g_isShutdown;
 
 CFrameGrinder::CFrameGrinder()
 {
+    m_cam_queue_thread = -1;
     m_blob_detect_thread = -1;
     pthread_mutex_init(&m_mutexQueue, &m_mutexattrQueue);
 
@@ -62,6 +64,33 @@ CFrameGrinder::CFrameGrinder()
 CFrameGrinder::~CFrameGrinder()
 {
     pthread_mutex_destroy(&m_mutexQueue);
+}
+
+void* cam_queue_thread(void* pVoid)
+{
+    CFrameGrinder* pFrameGrinder = (CFrameGrinder*) pVoid;
+    
+    CVideoFrame* pFrame = 0;
+    CVideoFrame* pFrame2 = 0;
+    while (!g_isShutdown)
+    {
+        if (pFrameGrinder->safeBlockingRemoveHead(&pFrame, CVideoFrame::FRAME_QUEUE_CAM1))
+        {
+            if (pFrameGrinder->safeRemoveHead(&pFrame2, CVideoFrame::FRAME_QUEUE_CAM2))
+            {
+                pFrame->m_pCameraVideoFrame2 = pFrame2;                
+                pFrame->m_pCameraVideoFrame2->m_pCameraVideoFrame2 = NULL;                
+                pFrameGrinder->m_testMonitor.m_nCountStereoFramesInThisInterval++;
+                CTestMonitor::getTicks(&pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_CAM2]);
+            }
+            else
+            {
+                pFrame->m_pCameraVideoFrame2 = NULL;                
+                pFrameGrinder->m_testMonitor.m_nCountMonoFramesInThisInterval++;
+            }
+            pFrameGrinder->safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT);
+        }
+    }
 }
 
 void* blob_detect_thread(void* pVoid)
@@ -81,6 +110,7 @@ void* blob_detect_thread(void* pVoid)
 
 void CFrameGrinder::init()
 {
+    dbgMsg_s("Start CFrameGrinder::init() \n");
     unsigned int i = 0;
 
     m_upperGoalDetector.init();
@@ -94,7 +124,13 @@ void CFrameGrinder::init()
     {
         m_frameQueueList[CVideoFrame::FRAME_QUEUE_FREE].addTail(new CVideoFrame(), m_mutexQueue);
     }
-    int iRet = pthread_create(&m_blob_detect_thread, NULL, blob_detect_thread, this);
+    int iRet = pthread_create(&m_cam_queue_thread, NULL, cam_queue_thread, this);
+    if (iRet != 0)
+    {
+        dbgMsg_s("We have an error (cam queue thread)\n");
+    }
+    
+    iRet = pthread_create(&m_blob_detect_thread, NULL, blob_detect_thread, this);
     if (iRet != 0)
     {
         dbgMsg_s("We have an error\n");
@@ -105,6 +141,7 @@ void CFrameGrinder::init()
     m_connectionServer.init(this);
 
     usleep(2 * 1000 * 1000); // Allow 2 seconds for threads to start up and get to where they are waiting on queues
+    dbgMsg_s("End CFrameGrinder::init() \n");
 }
 
 void CFrameGrinder::initVideo(int framesPerSec, unsigned int height, unsigned int width, int codec)
@@ -118,6 +155,7 @@ bool CFrameGrinder::safeGetFreeFrame(CVideoFrame** ppFrame)
     if (!m_frameQueueList[CVideoFrame::FRAME_QUEUE_FREE].removeHead(ppFrame, m_mutexQueue))
     {
         // Overrun condition - Get head from longest queue and count it as a dropped frame
+        dbgMsg_s("safeGetFreeFrame:  OVERRUN CONDITION %%%%%%%%%%%, (FREE queue remove failed)\n");
         pthread_mutex_lock(&m_mutexQueue);
         unsigned int i = 0;
         unsigned int maxQueueLength = 0;
@@ -170,24 +208,22 @@ bool CFrameGrinder::safeGetFreeFrame(CVideoFrame** ppFrame)
 
 void CFrameGrinder::safeAddTail(CVideoFrame* pFrame, CVideoFrame::FRAME_QUEUE_TYPE eFrameQueueType)
 {
-    CVideoFrame* pTempFrame = NULL;
-    if (eFrameQueueType != CVideoFrame::FRAME_QUEUE_FREE)
-    {
-        // Drop frames older that what we are holding - we want to provide the freshest possible data
-        while (m_frameQueueList[eFrameQueueType].size() > 0)
-        {
-            if (m_frameQueueList[eFrameQueueType].removeHead(&pTempFrame, m_mutexQueue))
-            {
-                m_frameQueueList[eFrameQueueType].m_droppedFrames++;
-                m_frameQueueList[CVideoFrame::FRAME_QUEUE_FREE].addTail(pTempFrame, m_mutexQueue);
-            }
-        }
-    }
     m_frameQueueList[eFrameQueueType].addTail(pFrame, m_mutexQueue);
 }
 
 bool CFrameGrinder::safeRemoveHead(CVideoFrame** ppFrame, CVideoFrame::FRAME_QUEUE_TYPE eFrameQueueType)
 {
+    if(eFrameQueueType != CVideoFrame::FRAME_QUEUE_FREE)
+    {
+        std::vector<CVideoFrame*> droppedFrames = m_frameQueueList[eFrameQueueType].dropOlderAndRemoveHead(ppFrame, m_mutexQueue);
+        while(droppedFrames.size() > 0)
+        {
+            CVideoFrame* pTempFrame = droppedFrames.back();
+            droppedFrames.pop_back();
+            m_frameQueueList[CVideoFrame::FRAME_QUEUE_FREE].addTail(pTempFrame, m_mutexQueue);
+        }
+        return (*ppFrame != NULL);
+    }
     return m_frameQueueList[eFrameQueueType].removeHead(ppFrame, m_mutexQueue);
 }
 
