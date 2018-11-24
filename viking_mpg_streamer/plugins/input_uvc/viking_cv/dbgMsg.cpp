@@ -38,7 +38,7 @@ static pthread_mutexattr_t static_dbgMutexattr;
 void dbgInit()
 {
     pthread_mutex_init(&static_dbgMutex, &static_dbgMutexattr);
-    FILE* fp = fopen("/home/pi/dbg.log", "w");
+    FILE* fp = fopen("/home/rock64/dbg.log", "w");
     if (fp != NULL)
     {
         fclose(fp);
@@ -50,7 +50,7 @@ void dbgMsg(const char* msg)
     pthread_mutex_lock(&static_dbgMutex);
     try
     {
-        FILE* fp = fopen("/home/pi/dbg.log", "a");
+        FILE* fp = fopen("/home/rock64/dbg.log", "a");
         if (fp != NULL)
         {
             int bytesWritten = fwrite(msg, sizeof (char), strlen(msg), fp);

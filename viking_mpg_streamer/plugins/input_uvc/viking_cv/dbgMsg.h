@@ -32,7 +32,7 @@
 #ifndef DBGMSG_H
 #define	DBGMSG_H
 
-#define HOME_NAME "pi"
+#define HOME_NAME "rock64"
 //#define TEST_USE_JPEGS_NOT_CAMERA
 
 

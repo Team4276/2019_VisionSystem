@@ -38,7 +38,7 @@
 #include "CSetting.h"
 #include "CSettingList.h"
 
-#define BASE_DIR "/home/pi/"
+#define BASE_DIR "/home/rock64/"
 
 CSettingList g_settings;
 
