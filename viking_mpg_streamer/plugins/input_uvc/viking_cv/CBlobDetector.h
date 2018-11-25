@@ -37,6 +37,8 @@
 #define VIEW_PIXEL_Y_WIDTH 240
 #define VIEW_PIXEL_X_HEIGHT 424
 
+class CFrameGrinder;  // forward def
+
 class CBlobDetector
 {
 public:

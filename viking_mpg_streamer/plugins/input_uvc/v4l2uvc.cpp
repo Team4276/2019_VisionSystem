@@ -27,7 +27,6 @@
 #include <errno.h>
 #include "v4l2uvc.h"
 #include "huffman.h"
-#include "dynctrl.h"
 
 context cams[MAX_INPUT_PLUGINS];
 

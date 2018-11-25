@@ -21,8 +21,8 @@ FC=gfortran
 AS=as
 
 # Macros
-CND_PLATFORM=None-Windows
-CND_DLIB_EXT=dll
+CND_PLATFORM=GNU-Linux-x86
+CND_DLIB_EXT=so
 CND_CONF=Release
 CND_DISTDIR=dist
 CND_BUILDDIR=build
@@ -35,10 +35,10 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/dynctrl.o \
 	${OBJECTDIR}/input_uvc.o \
 	${OBJECTDIR}/jpeg_utils.o \
 	${OBJECTDIR}/v4l2uvc.o \
+	${OBJECTDIR}/viking_cv/CBlobDetector.o \
 	${OBJECTDIR}/viking_cv/CConnection.o \
 	${OBJECTDIR}/viking_cv/CConnectionServer.o \
 	${OBJECTDIR}/viking_cv/CFrameGrinder.o \
@@ -47,8 +47,6 @@ OBJECTFILES= \
 	${OBJECTDIR}/viking_cv/CSettingList.o \
 	${OBJECTDIR}/viking_cv/CTargetInfo.o \
 	${OBJECTDIR}/viking_cv/CTestMonitor.o \
-	${OBJECTDIR}/viking_cv/CUpperGoalDetector.o \
-	${OBJECTDIR}/viking_cv/CUpperGoalRectangle.o \
 	${OBJECTDIR}/viking_cv/CVideoFrame.o \
 	${OBJECTDIR}/viking_cv/CVideoFrameQueue.o \
 	${OBJECTDIR}/viking_cv/dbgMsg.o
@@ -78,11 +76,6 @@ LDLIBSOPTIONS=-lopencv_calib3d -lopencv_core -lopencv_features2d -lopencv_flann 
 	${MKDIR} -p ../../dist/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ../../dist/${CND_CONF}/${CND_PLATFORM}/input_uvc.${CND_DLIB_EXT} ${OBJECTFILES} ${LDLIBSOPTIONS} -ljpeg -shared -fPIC
 
-${OBJECTDIR}/dynctrl.o: dynctrl.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/dynctrl.o dynctrl.cpp
-
 ${OBJECTDIR}/input_uvc.o: input_uvc.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
@@ -97,6 +90,11 @@ ${OBJECTDIR}/v4l2uvc.o: v4l2uvc.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/v4l2uvc.o v4l2uvc.cpp
+
+${OBJECTDIR}/viking_cv/CBlobDetector.o: viking_cv/CBlobDetector.cpp 
+	${MKDIR} -p ${OBJECTDIR}/viking_cv
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/viking_cv/CBlobDetector.o viking_cv/CBlobDetector.cpp
 
 ${OBJECTDIR}/viking_cv/CConnection.o: viking_cv/CConnection.cpp 
 	${MKDIR} -p ${OBJECTDIR}/viking_cv
@@ -137,16 +135,6 @@ ${OBJECTDIR}/viking_cv/CTestMonitor.o: viking_cv/CTestMonitor.cpp
 	${MKDIR} -p ${OBJECTDIR}/viking_cv
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/viking_cv/CTestMonitor.o viking_cv/CTestMonitor.cpp
-
-${OBJECTDIR}/viking_cv/CUpperGoalDetector.o: viking_cv/CUpperGoalDetector.cpp 
-	${MKDIR} -p ${OBJECTDIR}/viking_cv
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/viking_cv/CUpperGoalDetector.o viking_cv/CUpperGoalDetector.cpp
-
-${OBJECTDIR}/viking_cv/CUpperGoalRectangle.o: viking_cv/CUpperGoalRectangle.cpp 
-	${MKDIR} -p ${OBJECTDIR}/viking_cv
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/viking_cv/CUpperGoalRectangle.o viking_cv/CUpperGoalRectangle.cpp
 
 ${OBJECTDIR}/viking_cv/CVideoFrame.o: viking_cv/CVideoFrame.cpp 
 	${MKDIR} -p ${OBJECTDIR}/viking_cv

@@ -11,8 +11,7 @@
       <itemPath>plugins/input_uvc/viking_cv/CMessageFromClient.h</itemPath>
       <itemPath>plugins/input_uvc/viking_cv/CTargetInfo.h</itemPath>
       <itemPath>plugins/input_uvc/viking_cv/CTestMonitor.h</itemPath>
-      <itemPath>plugins/input_uvc/viking_cv/CUpperGoalDetector.h</itemPath>
-      <itemPath>plugins/input_uvc/viking_cv/CUpperGoalRectangle.h</itemPath>
+      <itemPath>plugins/input_uvc/viking_cv/CBlobDetector.h</itemPath>
       <itemPath>plugins/input_uvc/viking_cv/CVideoFrame.h</itemPath>
       <itemPath>plugins/input_uvc/viking_cv/CVideoFrameQueue.h</itemPath>
       <itemPath>plugins/input_uvc/viking_cv/dbgMsg.h</itemPath>
@@ -43,8 +42,7 @@
       <itemPath>plugins/input_uvc/viking_cv/CMessageFromClient.cpp</itemPath>
       <itemPath>plugins/input_uvc/viking_cv/CTargetInfo.cpp</itemPath>
       <itemPath>plugins/input_uvc/viking_cv/CTestMonitor.cpp</itemPath>
-      <itemPath>plugins/input_uvc/viking_cv/CUpperGoalDetector.cpp</itemPath>
-      <itemPath>plugins/input_uvc/viking_cv/CUpperGoalRectangle.cpp</itemPath>
+      <itemPath>plugins/input_uvc/viking_cv/CBlobDetector.cpp</itemPath>
       <itemPath>plugins/input_uvc/viking_cv/CVideoFrame.cpp</itemPath>
       <itemPath>plugins/input_uvc/viking_cv/CVideoFrameQueue.cpp</itemPath>
       <itemPath>plugins/input_uvc/viking_cv/dbgMsg.cpp</itemPath>

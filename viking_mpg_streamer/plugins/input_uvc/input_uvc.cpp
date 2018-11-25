@@ -44,18 +44,16 @@
 #include "v4l2uvc.h" // this header will includes the ../../mjpg_streamer.h
 #include "huffman.h"
 #include "jpeg_utils.h"
-#include "dynctrl.h"
 //#include "uvcvideo.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include "viking_cv/CUpperGoalRectangle.h"
 #include "viking_cv/CTargetInfo.h"
 #include "viking_cv/CVideoFrame.h"
 #include "viking_cv/CVideoFrameQueue.h"
+#include "viking_cv/CBlobDetector.h"
 #include "viking_cv/CConnectionServer.h"
 #include "viking_cv/CGpioLed.h"
-#include "viking_cv/CUpperGoalDetector.h"
 #include "viking_cv/CTestMonitor.h"
 #include "viking_cv/CFrameGrinder.h"
 #include "viking_cv/CSetting.h"
@@ -332,13 +330,6 @@ extern "C" {
             closelog();
             exit(EXIT_FAILURE);
         }
-        /*
-         * recent linux-uvc driver (revision > ~#125) requires to use dynctrls
-         * for pan/tilt/focus/...
-         * dynctrls must get initialized
-         */
-        if (dynctrls)
-            initDynCtrls(cams[id].videoIn->fd);
 
         enumerateControls(cams[id].videoIn, cams[id].pglobal, id); // enumerate V4L2 controls after UVC extended mapping
 

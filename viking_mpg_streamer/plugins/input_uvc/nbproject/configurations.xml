@@ -40,10 +40,6 @@
       <itemPath>viking_cv/CSettingList.cpp</itemPath>
       <itemPath>viking_cv/CTargetInfo.cpp</itemPath>
       <itemPath>viking_cv/CTestMonitor.cpp</itemPath>
-      <itemPath>viking_cv/CUpperGoalDetector.cpp</itemPath>
-      <itemPath>viking_cv/CUpperGoalDetector.h</itemPath>
-      <itemPath>viking_cv/CUpperGoalRectangle.cpp</itemPath>
-      <itemPath>viking_cv/CUpperGoalRectangle.h</itemPath>
       <itemPath>viking_cv/CVideoFrame.cpp</itemPath>
       <itemPath>viking_cv/CVideoFrameQueue.cpp</itemPath>
       <itemPath>viking_cv/dbgMsg.cpp</itemPath>
@@ -159,14 +155,6 @@
       </item>
       <item path="viking_cv/CTestMonitor.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="viking_cv/CUpperGoalDetector.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="viking_cv/CUpperGoalDetector.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="viking_cv/CUpperGoalRectangle.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="viking_cv/CUpperGoalRectangle.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="viking_cv/CVideoFrame.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="viking_cv/CVideoFrame.h" ex="false" tool="3" flavor2="0">
@@ -271,14 +259,6 @@
       <item path="viking_cv/CTestMonitor.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="viking_cv/CTestMonitor.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="viking_cv/CUpperGoalDetector.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="viking_cv/CUpperGoalDetector.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="viking_cv/CUpperGoalRectangle.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="viking_cv/CUpperGoalRectangle.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="viking_cv/CVideoFrame.cpp" ex="false" tool="1" flavor2="0">
       </item>

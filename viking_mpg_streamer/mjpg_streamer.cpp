@@ -44,19 +44,17 @@
 // All this is included just to support stereo cameras, (Must init CFrameGrinder only once, which for mono camera is OK in input_uvc.so init)
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include "plugins/input_uvc/viking_cv/CUpperGoalRectangle.h"
 #include "plugins/input_uvc/viking_cv/CTargetInfo.h"
 #include "plugins/input_uvc/viking_cv/CVideoFrame.h"
 #include "plugins/input_uvc/viking_cv/CVideoFrameQueue.h"
+#include "plugins/input_uvc/viking_cv/CBlobDetector.h"
 #include "plugins/input_uvc/viking_cv/CConnectionServer.h"
 #include "plugins/input_uvc/viking_cv/CGpioLed.h"
-#include "plugins/input_uvc/viking_cv/CUpperGoalDetector.h"
 #include "plugins/input_uvc/viking_cv/CTestMonitor.h"
 #include "plugins/input_uvc/viking_cv/CFrameGrinder.h"
 
 /* globals */
 static globals global;
-extern CFrameGrinder frameGrinder;
 
 
 /******************************************************************************
@@ -198,8 +196,6 @@ int main(int argc, char *argv[])
     char *output[MAX_OUTPUT_PLUGINS];
     int daemon = 0, i;
     size_t tmp = 0;
-
-    frameGrinder.init();
             
     input[0] = (char*)"input_uvc.so --resolution 640x480 --fps 5 --device /dev/video0";
     input[1] = (char*)"input_uvc.so --resolution 640x480 --fps 5 --device /dev/video1";
