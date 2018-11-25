@@ -37,13 +37,12 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
-#include "CUpperGoalRectangle.h"
 #include "CTargetInfo.h"
 #include "CVideoFrame.h"
 #include "CVideoFrameQueue.h"
 #include "CConnectionServer.h"
 #include "CGpioLed.h"
-#include "CUpperGoalDetector.h"
+#include "CBlobDetector.h"
 #include "CTestMonitor.h"
 #include "CFrameGrinder.h"
 #include "dbgMsg.h"
@@ -99,8 +98,7 @@ void CTestMonitor::init()
     m_nNextFile = getNextFileNumber(m_sLogFolder);
 
 
-    m_nIntervalisUpperGoalFound = 0;
-    m_avgUpperGoalRectangle.init();
+    m_nIntervalisClosestObjectFound = 0;
     m_nCountStereoFramesInThisInterval = 0;
     m_nCountMonoFramesInThisInterval = 0;
     memset(&m_avgElapsedSeconds, 0, sizeof (double)*NUMBER_OF_TIME_IN_TASK);
@@ -311,6 +309,25 @@ double CTestMonitor::getDeltaTimeMilliseconds(struct timespec timeStart, struct 
     return dTemp;
 }
 
+std::string CTestMonitor::displayQueueLengths(const CFrameGrinder* pFrameGrinder)
+{
+    std::string sLine;
+    sLine += "Queue lengths  CAM1: ";
+    sLine += numberToText(pFrameGrinder->m_frameQueueList[CVideoFrame::FRAME_QUEUE_CAM1].size());
+    sLine += "  CAM2: ";
+    sLine += numberToText(pFrameGrinder->m_frameQueueList[CVideoFrame::FRAME_QUEUE_CAM2].size());
+    sLine += "  WAITBLOB: ";
+    sLine += numberToText(pFrameGrinder->m_frameQueueList[CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT].size());
+    sLine += "  WAITTEXT: ";
+    sLine += numberToText(pFrameGrinder->m_frameQueueList[CVideoFrame::FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT].size());
+    sLine += "  WAITBROWSER: ";
+    sLine += numberToText(pFrameGrinder->m_frameQueueList[CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT].size());
+    sLine += "  FREE: ";
+    sLine += numberToText(pFrameGrinder->m_frameQueueList[CVideoFrame::FRAME_QUEUE_FREE].size());
+    sLine += "\n";
+    return sLine;
+}
+
 void CTestMonitor::monitorQueueTimesBeforeReturnToFreeQueue(CVideoFrame* pFrame, CFrameGrinder* pFrameGrinder)
 {
     std::string sLine;
@@ -322,36 +339,34 @@ void CTestMonitor::monitorQueueTimesBeforeReturnToFreeQueue(CVideoFrame* pFrame,
     if (m_nTasksDone[TASK_DONE_CAM1] >= NUMBER_OF_SAMPLES_PER_TEST_INTERVAL)
     {
         timeIntervalSeconds = getDeltaTimeSeconds(
-                timeAtStartOfInterval,
-                pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_FREE]);
+                                                  timeAtStartOfInterval,
+                                                  pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_FREE]);
         timeAtStartOfInterval = pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_FREE];
-        if (m_nIntervalisUpperGoalFound == 0)
+        if (m_nIntervalisClosestObjectFound == 0)
         {
-            sLine += "Upper goal not found,     ";
+            sLine += "Closest object not found,     ";
         }
         else
         {
-            m_avgUpperGoalRectangle.center.x /= m_nIntervalisUpperGoalFound;
-            m_avgUpperGoalRectangle.center.y /= m_nIntervalisUpperGoalFound;
-            m_avgUpperGoalRectangle.angle /= m_nIntervalisUpperGoalFound;
-            sLine += "Upper goal (";
-            sLine += numberToText(m_nIntervalisUpperGoalFound);
+            sLine += "Closest object (";
+            sLine += numberToText(m_nIntervalisClosestObjectFound);
             sLine += " in this interval) avg ";
-            sLine += m_avgUpperGoalRectangle.displayText();
         }
-        if(m_nCountStereoFramesInThisInterval > 0)
+        if (m_nCountStereoFramesInThisInterval > 0)
         {
             sLine += "      Stereo frames in this interval: ";
             sLine += numberToText(m_nCountStereoFramesInThisInterval);
         }
-        if(m_nCountMonoFramesInThisInterval > 0)
+        if (m_nCountMonoFramesInThisInterval > 0)
         {
             sLine += "      Mono frames in this interval: ";
             sLine += numberToText(m_nCountMonoFramesInThisInterval);
         }
-        sLine += "\n";       
+        sLine += "\n";
         m_nCountStereoFramesInThisInterval = 0;
         m_nCountMonoFramesInThisInterval = 0;
+
+        sLine += displayQueueLengths(pFrameGrinder);
 
         for (i = 0; i < NUMBER_OF_TIME_IN_TASK; i++)
         {
@@ -370,10 +385,9 @@ void CTestMonitor::monitorQueueTimesBeforeReturnToFreeQueue(CVideoFrame* pFrame,
             m_nTasksDone[i] = 0;
         }
 
-        m_nIntervalisUpperGoalFound = 0;
-        m_avgUpperGoalRectangle.init();
+        m_nIntervalisClosestObjectFound = 0;
 
-         memset(&m_avgElapsedSeconds, 0, sizeof (unsigned int)*NUMBER_OF_TIME_IN_TASK);
+        memset(&m_avgElapsedSeconds, 0, sizeof (unsigned int)*NUMBER_OF_TIME_IN_TASK);
         m_avgTimeBetweenCameraFramesMilliseconds = 0;
         m_avgLatencyForProcessingFrameMilliseconds = 0;
 
@@ -383,50 +397,47 @@ void CTestMonitor::monitorQueueTimesBeforeReturnToFreeQueue(CVideoFrame* pFrame,
             pFrameGrinder->m_frameQueueList[i].m_droppedFrames = 0;
         }
     }
-    if (pFrame->m_targetInfo.isUpperGoalFound())
+    if (pFrame->m_targetInfo.isClosestObjectFound())
     {
-        m_nIntervalisUpperGoalFound++;
-        m_avgUpperGoalRectangle.center.x += pFrame->m_upperGoalRectangle.center.x;
-        m_avgUpperGoalRectangle.center.y += pFrame->m_upperGoalRectangle.center.y;
-        m_avgUpperGoalRectangle.angle += pFrame->m_upperGoalRectangle.angle;
+        m_nIntervalisClosestObjectFound++;
     }
-   
+
     m_avgElapsedSeconds[TIME_IN_TASK_PLACEHOLDER1] = 0.0;
     m_avgElapsedSeconds[TIME_IN_TASK_PLACEHOLDER2] = 0.0;
-    
+
     m_avgElapsedSeconds[TIME_IN_TASK_CAMERA] += getDeltaTimeSeconds(
-            pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_FREE], // earlier time
-            pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT]); // later time
-    
+                                                                    pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_FREE], // earlier time
+                                                                    pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT]); // later time
+
     m_avgElapsedSeconds[TIME_IN_TASK_CAMERA_2] = m_avgElapsedSeconds[TIME_IN_TASK_CAMERA];
 
     m_avgElapsedSeconds[TIME_IN_TASK_WAIT_FOR_BLOB_DETECT] += getDeltaTimeSeconds(
-            pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT],
-            pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT]);
+                                                                                  pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT],
+                                                                                  pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT]);
 
     m_avgElapsedSeconds[TIME_IN_TASK_BLOB_DETECT] += getDeltaTimeSeconds(
-            pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT],
-            pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT]);
+                                                                         pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT],
+                                                                         pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT]);
 
     m_avgElapsedSeconds[TIME_IN_TASK_WAIT_FOR_TEXT_CLIENT] += getDeltaTimeSeconds(
-            pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT],
-            pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT]);
+                                                                                  pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT],
+                                                                                  pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT]);
 
     m_avgElapsedSeconds[TIME_IN_TASK_TEXT_CLIENT] += getDeltaTimeSeconds(
-            pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT],
-            pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT]);
+                                                                         pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT],
+                                                                         pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT]);
 
     m_avgElapsedSeconds[TIME_IN_TASK_WAIT_FOR_BROWSER_CLIENT] += getDeltaTimeSeconds(
-            pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT],
-            pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT]);
+                                                                                     pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT],
+                                                                                     pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT]);
 
     m_avgElapsedSeconds[TIME_IN_TASK_BROWSER_CLIENT] += getDeltaTimeSeconds(
-            pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT],
-            pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_FREE]);
+                                                                            pFrame->m_timeRemovedFromQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT],
+                                                                            pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_FREE]);
 
     m_avgElapsedSeconds[TIME_TOTAL_CAMDONE_TO_TEXTDONE] += getDeltaTimeSeconds(
-            pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT],
-            pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT]);
+                                                                               pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT],
+                                                                               pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT]);
     m_avgTimeBetweenCameraFramesMilliseconds += pFrame->m_targetInfo.getTimeSinceLastCameraFrameMilliseconds();
     m_avgLatencyForProcessingFrameMilliseconds += pFrame->m_targetInfo.getTimeLatencyThisCameraFrameMilliseconds();
 }

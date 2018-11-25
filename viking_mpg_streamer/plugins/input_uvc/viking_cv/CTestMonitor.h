@@ -52,6 +52,7 @@ public:
     static double getDeltaTimeMilliseconds(struct timespec timeStart, struct timespec timeEnd);
     static double getDeltaTimeSeconds(struct timespec timeStart, struct timespec timeEnd);
     static void getTicks(struct timespec* pTime);
+    static std::string displayQueueLengths(const CFrameGrinder* pFrameGrinder);
 
     typedef enum
     {
@@ -109,8 +110,7 @@ private:
     cv::VideoWriter m_outVideo;
 
     // Running totals for current test interval
-    unsigned int m_nIntervalisUpperGoalFound;
-    CUpperGoalRectangle m_avgUpperGoalRectangle;
+    unsigned int m_nIntervalisClosestObjectFound;
     double m_avgElapsedSeconds[NUMBER_OF_TIME_IN_TASK];
     double m_avgTimeBetweenCameraFramesMilliseconds;
     double m_avgLatencyForProcessingFrameMilliseconds;

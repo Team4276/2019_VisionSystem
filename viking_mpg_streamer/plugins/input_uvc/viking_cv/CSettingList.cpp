@@ -53,9 +53,11 @@ CSettingList::~CSettingList()
 void CSettingList::init()
 {
     char buf[128] = {0};
+    
     const CSetting::INIT_SETTINGS initSettings[] = {
+        {CSetting::SETTING_OPERATING_MODE,             "operatingMode.txt",                 1},     
         {CSetting::SETTING_ENABLE_DYNAMIC_SETTINGS,    "enableDynamicSettings.txt",         0},
-        {CSetting::SETTING_EXPOSURE,                   "exposureZeroTo2047.txt",          260},
+        {CSetting::SETTING_EXPOSURE,                   "exposureZeroTo5000.txt",         1000},
         {CSetting::SETTING_ENABLE_STREAM_FILTER_IMAGE, "enableStreamFilterImage.txt",       0},
         {CSetting::SETTING_FILTER_HUE_LOWER_BOUND,     "filterHueLowerBoundZeroTo255.txt", 79},
         {CSetting::SETTING_FILTER_HUE_UPPER_BOUND,     "filterHueUpperBoundZeroTo255.txt", 96},

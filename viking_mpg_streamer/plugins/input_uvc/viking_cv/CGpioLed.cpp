@@ -39,13 +39,12 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include "CConnection.h"
-#include "CUpperGoalRectangle.h"
 #include "CTargetInfo.h"
 #include "CVideoFrame.h"
 #include "CVideoFrameQueue.h"
 #include "CConnectionServer.h"
 #include "CGpioLed.h"
-#include "CUpperGoalDetector.h"
+#include "CBlobDetector.h"
 #include "CTestMonitor.h"
 #include "CFrameGrinder.h"
 #include "dbgMsg.h"

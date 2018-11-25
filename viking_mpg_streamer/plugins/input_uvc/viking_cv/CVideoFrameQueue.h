@@ -41,6 +41,7 @@ public:
     void addTail(CVideoFrame* pFrame, pthread_mutex_t& mutexQueue);
     bool removeHead(CVideoFrame** ppFrame, pthread_mutex_t& mutexQueue); // Returns 'false' if queue is empty
     std::vector<CVideoFrame*> dropOlderAndRemoveHead(CVideoFrame** ppFrame, pthread_mutex_t& mutexQueue); // Returns 'false' if queue is empty
+    std::vector<CVideoFrame*> dropOlderAndKeepHead(CVideoFrame** ppFrame, pthread_mutex_t& mutexQueue); // Returns 'false' if queue is empty
     bool blockingRemoveHead(CVideoFrame** ppFrame, pthread_mutex_t& mutexQueue); // Calling thread will sleep if nothing in the queue
     void nolockAddTail(CVideoFrame* pFrame);
     bool nolockRemoveHead(CVideoFrame** ppFrame); // Returns 'false' if queue is empty

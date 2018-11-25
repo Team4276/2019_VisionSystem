@@ -44,13 +44,12 @@
 #include "../v4l2uvc.h" // this header will includes the ../../mjpg_streamer.h
 
 #include "CConnection.h"
-#include "CUpperGoalRectangle.h"
 #include "CTargetInfo.h"
 #include "CVideoFrame.h"
 #include "CVideoFrameQueue.h"
 #include "CConnectionServer.h"
 #include "CGpioLed.h"
-#include "CUpperGoalDetector.h"
+#include "CBlobDetector.h"
 #include "CTestMonitor.h"
 #include "CFrameGrinder.h"
 #include "CMessageFromClient.h"
@@ -167,44 +166,51 @@ void* text_server_thread(void* pVoid)
     {
         if (pFrameGrinder->safeBlockingRemoveHead(&pFrame, CVideoFrame::FRAME_QUEUE_WAIT_FOR_TEXT_CLIENT))
         {
-            if (pFrameGrinder->m_connectionServer.isTextConnectionReadyToReceive())
+            try
             {
-                pFrame->m_targetInfo.initFormattedTextFromTargetInfo();
-                sMsg = pFrame->m_targetInfo.displayText();
-                sMsg += "\n";
-                iRet = static_textConnection.writeClient((char*) sMsg.c_str(), sMsg.size());
-                fflush(NULL);
-                pFrameGrinder->m_testMonitor.m_nTasksDone[CTestMonitor::TASK_DONE_TEXT]++;
-            }            
-            
-            pFrameGrinder->safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT);
+                if (pFrameGrinder->m_connectionServer.isTextConnectionReadyToReceive())
+                {
+                    pFrame->m_targetInfo.initFormattedTextFromTargetInfo();
+                    sMsg = pFrame->m_targetInfo.displayText();
+                    sMsg += "\n";
+                    iRet = static_textConnection.writeClient((char*) sMsg.c_str(), sMsg.size());
+                    fflush(NULL);
+                    pFrameGrinder->m_testMonitor.m_nTasksDone[CTestMonitor::TASK_DONE_TEXT]++;
+                }
+            }
+            catch (...)
+            {
+                dbgMsg_s("Exception in text_server_thread\n");
+            }
+            pFrameGrinder->safeAddTailAndPurgeOlder(pFrame, CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT);
         }
     }
 }
 
 void* browser_server_thread(void* pVoid)
 {
-    context* pcontext = &cams[0];  // All code not relating to our camera in and http out has been removed
+    context* pcontext = &cams[0]; // All code not relating to our camera in and http out has been removed
     static int iCount = 0;
     unsigned int i = 0;
     CFrameGrinder* pFrameGrinder = (CFrameGrinder*) pVoid;
     CVideoFrame* pFrame = 0;
     std::string sTemp;
-    
+
     std::vector<unsigned char> buf;
     std::vector<int> qualityType;
     qualityType.push_back(CV_IMWRITE_JPEG_QUALITY);
     qualityType.push_back(50);
-    
+
     int bytesWritten = 0;
-    int sockfd = socket(AF_INET, SOCK_DGRAM,0);
-    union 
+    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    union
     {
         struct in_addr addr;
         unsigned char b[4];
     } u;
     struct sockaddr_in ipRoboRio;
-    memset(&ipRoboRio, 0, sizeof(struct sockaddr_in));
+    memset(&ipRoboRio, 0, sizeof (struct sockaddr_in));
     ipRoboRio.sin_family = AF_INET;
     ipRoboRio.sin_port = htons(5809);
     u.b[0] = 10;
@@ -216,49 +222,85 @@ void* browser_server_thread(void* pVoid)
     while (!g_isShutdown)
     {
         if (pFrameGrinder->safeBlockingRemoveHead(&pFrame, CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT))
-        {            
-           /* copy JPG picture to global buffer */
-            pthread_mutex_lock(&pglobal->in[pcontext->id].db);
-            
-            iCount++;
-            if((iCount % 19) == 0)
+        {
+            try
             {
-                pFrameGrinder->m_testMonitor.saveFrameToJpeg(pFrame->m_frame);
+                iCount++;
+                if ((iCount % 19) == 0)
+                {
+                    pFrameGrinder->m_testMonitor.saveFrameToJpeg(pFrame->m_frame);
+                }
+                pFrame->annotate();
+                if ((iCount % 23) == 0)
+                {
+                    int iSetting = g_settings.getSetting(CSetting::SETTING_OPERATING_MODE);
+                    switch (iSetting)
+                    {
+                    case CSetting::MODE_STEREO_CAMS:
+                        if (!pFrame->m_frame.empty())
+                        {
+                            pFrameGrinder->m_testMonitor.saveFrameToJpeg(pFrame->m_frame);
+                            cv::imencode(".jpg", pFrame->m_frame, buf, qualityType);
+                        }
+                        break;
+                    case CSetting::MODE_RIGHT_CAM:
+                        if (!pFrame->m_frame.empty())
+                        {
+                            pFrameGrinder->m_testMonitor.saveFrameToJpeg(pFrame->m_frame);
+                            cv::imencode(".jpg", pFrame->m_frame, buf, qualityType);
+                        }
+                        break;
+                    case CSetting::MODE_LEFT_CAM:
+                        if (!pFrame->m_frame.empty() > 0)
+                            if ((pFrame->m_pCameraVideoFrame2 != NULL) && (!pFrame->m_pCameraVideoFrame2->m_frame.empty()))
+                            {
+                                pFrameGrinder->m_testMonitor.saveFrameToJpeg(pFrame->m_pCameraVideoFrame2->m_frame);
+                                cv::imencode(".jpg", pFrame->m_pCameraVideoFrame2->m_frame, buf, qualityType);
+                            }
+                        break;
+                    default:
+                        dbgMsg_s("Unknown operating mode\n");
+                        break;
+                    }
+                }
+
+                if (buf.size() > 0)
+                {
+                    pthread_mutex_lock(&pglobal->in[pcontext->id].db);
+
+                    DBG("copying frame from input: %d\n", (int) pcontext->id);
+                    pglobal->in[pcontext->id].size = memcpy_picture(pglobal->in[pcontext->id].buf, buf.data(), buf.size());
+
+                    /* copy this frame's timestamp to user space */
+                    pglobal->in[pcontext->id].timestamp = pcontext->videoIn->buf.timestamp;
+
+                    /* signal fresh_frame */
+                    pthread_cond_broadcast(&pglobal->in[pcontext->id].db_update);
+
+                    pthread_mutex_unlock(&pglobal->in[pcontext->id].db);
+
+                    sTemp = pFrame->m_targetInfo.initFormattedTextFromTargetInfo();
+
+                    bytesWritten = sendto(sockfd, sTemp.c_str(), sTemp.size(), 0,
+                                          (struct sockaddr*) &ipRoboRio, sizeof (struct sockaddr_in));
+
+                    pFrameGrinder->m_testMonitor.m_nTasksDone[CTestMonitor::TASK_DONE_BROWSER]++;
+
+                }
             }
-            pFrame->annotate();
-            if((iCount % 23) == 0)
+            catch (...)
             {
-                pFrameGrinder->m_testMonitor.saveFrameToJpeg(pFrame->m_frame);
-            }
-            if(g_settings.getSetting(CSetting::SETTING_ENABLE_STREAM_FILTER_IMAGE) != 0)
-            {
-                cv::imencode(".jpg", pFrame->m_filteredFrame, buf, qualityType);  
-            }
-            else
-            {
-                cv::imencode(".jpg", pFrame->m_frame, buf, qualityType);  
+                dbgMsg_s("Exception in browser_server_thread\n");
             }
 
-            DBG("copying frame from input: %d\n", (int)pcontext->id);
-            pglobal->in[pcontext->id].size = memcpy_picture(pglobal->in[pcontext->id].buf, buf.data(), buf.size());
-
-
-            /* copy this frame's timestamp to user space */
-            pglobal->in[pcontext->id].timestamp = pcontext->videoIn->buf.timestamp;
-
-            /* signal fresh_frame */
-            pthread_cond_broadcast(&pglobal->in[pcontext->id].db_update);
-            pthread_mutex_unlock(&pglobal->in[pcontext->id].db);
-
-            sTemp = pFrame->m_targetInfo.initFormattedTextFromTargetInfo();
-
-            bytesWritten = sendto(sockfd, sTemp.c_str(), sTemp.size(), 0, 
-                                (struct sockaddr*)&ipRoboRio, sizeof(struct sockaddr_in));
-            
-            pFrameGrinder->m_testMonitor.m_nTasksDone[CTestMonitor::TASK_DONE_BROWSER]++;
+            //dbgMsg_s("browser_server_thread finished processing, returning frame to FREE queue\n");
 
             pFrameGrinder->m_testMonitor.monitorQueueTimesBeforeReturnToFreeQueue(pFrame, pFrameGrinder);
-            //dbgMsg_s("browser_server_thread finished processing, returning frame to FREE queue\n");
+            if (pFrame->m_pCameraVideoFrame2 != NULL)
+            {
+                pFrameGrinder->safeAddTail(pFrame->m_pCameraVideoFrame2, CVideoFrame::FRAME_QUEUE_FREE);
+                pFrame->m_pCameraVideoFrame2 = NULL;
+            }
             pFrameGrinder->safeAddTail(pFrame, CVideoFrame::FRAME_QUEUE_FREE);
         }
     }

@@ -33,7 +33,6 @@
 #include <stdio.h>
 #include "opencv2/core/core.hpp"
 
-#include "CUpperGoalRectangle.h"
 #include "CTargetInfo.h"
 
 CTargetInfo::CTargetInfo()
@@ -56,18 +55,19 @@ void CTargetInfo::init()
     m_targetInfoText = "";
     m_timeSinceLastCameraFrameMilliseconds = 0;
     m_timeLatencyThisCameraFrameMilliseconds = 0;
-    m_isUpperGoalFound = 0;
-    m_upperGoalAzimuthDegrees = 0.0;
-    m_distanceToUpperGoalInches = 0.0;
+    m_isClosestObjectFound = false;
+    m_distanceToClosestObjectInches = 0.0;
+    m_xPixelCenterOfClosestObject = 0;
+    m_xPixelAvoidClosestObjectRightPath = 0;
+    m_xPixelAvoidClosestObjectLeftPath = 0;
 }
 
 void CTargetInfo::updateTargetInfo(
         int timeSinceLastCameraFrameMilliseconds,
         int timeLatencyThisCameraFrameMilliseconds,
-        bool isUpperGoalFound,
-        float upperGoalAzimuthDegrees,
-        float distanceToUpperGoalInches,
-        float upperGoalRectangle_centerX)
+        bool isClosestObjectFound,
+        double distanceToClosestObjectInches,
+        int xPixelCenterOfClosestObject)
 {
     init();
 
@@ -75,19 +75,17 @@ void CTargetInfo::updateTargetInfo(
     m_timeLatencyThisCameraFrameMilliseconds = timeLatencyThisCameraFrameMilliseconds;
 
     // isFound() is needed for frame annotation,  even ifCV is not oriented)
-    m_isUpperGoalFound = isUpperGoalFound;
+    m_isClosestObjectFound = isClosestObjectFound;
 
-    if (isUpperGoalFound)
+    if (isClosestObjectFound)
     {
-        m_upperGoalAzimuthDegrees = upperGoalAzimuthDegrees;
-        m_distanceToUpperGoalInches = distanceToUpperGoalInches;
-        m_upperGoalRectangle_centerX = upperGoalRectangle_centerX;
+        m_xPixelCenterOfClosestObject = xPixelCenterOfClosestObject;
+        m_distanceToClosestObjectInches = distanceToClosestObjectInches;
     }
     else
     {
-        m_upperGoalAzimuthDegrees = -999;
-        m_distanceToUpperGoalInches = 999;
-        m_upperGoalRectangle_centerX = -999;
+        m_xPixelCenterOfClosestObject = -999;
+        m_distanceToClosestObjectInches = 999;
     }
 }
 
@@ -100,11 +98,10 @@ std::string CTargetInfo::initFormattedTextFromTargetInfo()
 {
     char buf[128];
     // Format text for transmission to the RoboRio
-    sprintf(buf, "%d,%d,%d,%d",
-            m_isUpperGoalFound,
-            (int) (m_upperGoalAzimuthDegrees * 10),
-            (int) m_distanceToUpperGoalInches,
-            (int) m_upperGoalRectangle_centerX);
-    m_targetInfoText = buf;
+    sprintf(buf, "%d,%d,%d",
+            m_isClosestObjectFound,
+            (int) (m_xPixelCenterOfClosestObject * 10),
+            (int) m_distanceToClosestObjectInches);
+     m_targetInfoText = buf;
     return m_targetInfoText;
 }

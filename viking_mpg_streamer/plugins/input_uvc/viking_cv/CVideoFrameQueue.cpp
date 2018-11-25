@@ -35,13 +35,12 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include "CUpperGoalRectangle.h"
 #include "CTargetInfo.h"
 #include "CVideoFrame.h"
 #include "CVideoFrameQueue.h"
 #include "CConnectionServer.h"
 #include "CGpioLed.h"
-#include "CUpperGoalDetector.h"
+#include "CBlobDetector.h"
 #include "CTestMonitor.h"
 #include "CFrameGrinder.h"
 #include "dbgMsg.h"
@@ -102,6 +101,14 @@ std::vector<CVideoFrame*> CVideoFrameQueue::dropOlderAndRemoveHead(CVideoFrame**
     pthread_mutex_lock(&mutexQueue);
     std::vector<CVideoFrame*> droppedFrames = nolockDropOlderFrames();
     nolockRemoveHead(ppFrame);  // *ppFrame == NULL if no frame removed
+    pthread_mutex_unlock(&mutexQueue);
+    return droppedFrames;
+}
+    
+std::vector<CVideoFrame*> CVideoFrameQueue::dropOlderAndKeepHead(CVideoFrame** ppFrame, pthread_mutex_t& mutexQueue)
+{
+    pthread_mutex_lock(&mutexQueue);
+    std::vector<CVideoFrame*> droppedFrames = nolockDropOlderFrames();
     pthread_mutex_unlock(&mutexQueue);
     return droppedFrames;
 }

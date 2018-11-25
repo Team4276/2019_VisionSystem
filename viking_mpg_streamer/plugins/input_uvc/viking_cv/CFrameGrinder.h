@@ -43,6 +43,7 @@ public:
     // These are called 'safe' because only one thread at a time can add or remove from queues
     bool safeGetFreeFrame(CVideoFrame** ppFrame);
     void safeAddTail(CVideoFrame* pFrame, CVideoFrame::FRAME_QUEUE_TYPE eFrameQueueType);
+    void safeAddTailAndPurgeOlder(CVideoFrame* pFrame, CVideoFrame::FRAME_QUEUE_TYPE eFrameQueueType);
     bool safeRemoveHead(CVideoFrame** ppFrame, CVideoFrame::FRAME_QUEUE_TYPE eFrameQueueType);
     bool safeBlockingRemoveHead(CVideoFrame** ppFrame, CVideoFrame::FRAME_QUEUE_TYPE eFrameQueueType);
 
@@ -52,7 +53,7 @@ public:
 public:
     CVideoFrameQueue m_frameQueueList[CVideoFrame::NUMBER_OF_FRAME_QUEUES];
     CConnectionServer m_connectionServer;
-    CUpperGoalDetector m_upperGoalDetector;
+    CBlobDetector m_blobDetector;
     CTestMonitor m_testMonitor;
 
 protected:

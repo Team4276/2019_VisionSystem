@@ -48,10 +48,9 @@ public:
     void updateTargetInfo(
             int timeSinceLastCameraFrameMilliseconds,
             int timeLatencyThisCameraFrameMilliseconds, 
-            bool isUpperGoalFound,
-            float upperGoalAzimuthDegrees,
-            float distanceToUpperGoalInches,
-            float upperGoalRectangle_centerX);
+            bool isClosestObjectFound,
+            double distanceToClosestObjectInches,
+            int xPixelCenterOfClosestObject);
 
     void initTargetInfoFromText(const std::string& targetInfoText);
 
@@ -67,21 +66,21 @@ public:
     }
 
     /* 0 == not found */
-    int isUpperGoalFound() const
+    int isClosestObjectFound() const
     {
-        return m_isUpperGoalFound;
+        return m_isClosestObjectFound;
     }
 
     /* degrees, + == to the right */
-    float upperGoalAzimuthDegrees() const
+    float xPixelCenterOfClosestObject() const
     {
-        return m_upperGoalAzimuthDegrees;
+        return m_xPixelCenterOfClosestObject;
     }
 
     /* feet from back of robot, should always be positive */
-    float distanceToUpperGoalInches() const
+    float distanceToClosestObjectInches() const
     {
-        return m_distanceToUpperGoalInches;
+        return m_distanceToClosestObjectInches;
     }
 
     std::string initFormattedTextFromTargetInfo();
@@ -92,11 +91,12 @@ private:
     std::string m_targetInfoText;
     int m_timeSinceLastCameraFrameMilliseconds;
     int m_timeLatencyThisCameraFrameMilliseconds;
-    int m_isUpperGoalFound;
-    float m_upperGoalAzimuthDegrees;
-    float m_distanceToUpperGoalInches;
-    float m_upperGoalRectangle_centerX;
-};
+    bool m_isClosestObjectFound;
+    double m_distanceToClosestObjectInches;
+    int m_xPixelCenterOfClosestObject;
+    int m_xPixelAvoidClosestObjectRightPath;
+    int m_xPixelAvoidClosestObjectLeftPath;
+ };
 
 #endif	/* CTARGETINFO_H */
 

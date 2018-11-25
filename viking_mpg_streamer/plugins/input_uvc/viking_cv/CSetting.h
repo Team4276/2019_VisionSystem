@@ -35,10 +35,17 @@
 class CSetting
 {
 public:
+    typedef enum 
+    {
+        MODE_STEREO_CAMS,  // 0 == Stereo Cameras. Disparity Map shows at port 5800 web page
+        MODE_RIGHT_CAM,    // 1 == Right Camera Calibration 
+        MODE_LEFT_CAM,     // 2 == Left Camera Calibration 
+    } OPERATING_MODE;
     typedef enum
     {
         SETTING_TYPE_UNKNOWN = -1,
-        SETTING_ENABLE_DYNAMIC_SETTINGS = 0, // ==0 init at startup only
+        SETTING_OPERATING_MODE = 0,  // enum OPERATING_MODE
+        SETTING_ENABLE_DYNAMIC_SETTINGS, // ==0 init at startup only
         SETTING_EXPOSURE,
         SETTING_ENABLE_STREAM_FILTER_IMAGE, // != 0 show filtered blobs instead of annotated original
         SETTING_FILTER_HUE_LOWER_BOUND,

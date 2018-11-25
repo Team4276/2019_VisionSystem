@@ -53,8 +53,6 @@ public:
     ~CVideoFrame();
 
     void init();
-    void updateAnnotationInfo(
-            const CUpperGoalRectangle& upperGoalRectangle);
     void annotate();
     
     static std::string queueTypeToText(FRAME_QUEUE_TYPE val);
@@ -68,7 +66,6 @@ public:
     CVideoFrame* m_pCameraVideoFrame2;
    
     CTargetInfo m_targetInfo;
-    CUpperGoalRectangle m_upperGoalRectangle;
 
     std::vector<uchar> m_outbuf;
     std::vector<int> m_params;
