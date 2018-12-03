@@ -58,32 +58,31 @@ extern CSettingList g_settings;
 static cv::Ptr<cv::StereoBM> static_sbm;
 
 // Stereo SGBM stands for semi block matching algorithm.
-static cv::Ptr<cv::StereoSGBM> static_sgbm ;
+static cv::Ptr<cv::StereoSGBM> static_sgbm;
 
 static cv::Ptr<cv::Feature2D> static_f2d;
 static cv::Ptr<cv::Feature2D> static_fd;
 
-
 CBlobDetector::CBlobDetector()
-{         
+{
     cv::Ptr<cv::Feature2D> static_f2d = new cv::Feature2D();
     cv::Ptr<cv::Feature2D> static_fd = new cv::Feature2D();
- 
-    int ndisparities = 96;   /**< Range of disparity */
-    int SADWindowSize = 7;
-    static_sbm = cv::StereoBM::create( ndisparities, SADWindowSize );
 
-    static_sgbm = cv::StereoSGBM::create(-3,    //int minDisparity
-                                    96,    //int numDisparities
-                                     7,    //int SADWindowSize
-                                    60,    //int P1 = 0
-                                  2400,    //int P2 = 0
-                                    90,    //int disp12MaxDiff = 0
-                                    16,    //int preFilterCap = 0
-                                     1,    //int uniquenessRatio = 0
-                                    60,    //int speckleWindowSize = 0
-                                    20,    //int speckleRange = 0
-                                   true ); //bool fullDP = false
+    int ndisparities = 96; /**< Range of disparity */
+    int SADWindowSize = 7;
+    static_sbm = cv::StereoBM::create(ndisparities, SADWindowSize);
+
+    static_sgbm = cv::StereoSGBM::create(-3, //int minDisparity
+                                         96, //int numDisparities
+                                         7, //int SADWindowSize
+                                         60, //int P1 = 0
+                                         2400, //int P2 = 0
+                                         90, //int disp12MaxDiff = 0
+                                         16, //int preFilterCap = 0
+                                         1, //int uniquenessRatio = 0
+                                         60, //int speckleWindowSize = 0
+                                         20, //int speckleRange = 0
+                                         true); //bool fullDP = false
 }
 
 CBlobDetector::CBlobDetector(const CBlobDetector& orig)
@@ -103,11 +102,9 @@ void CBlobDetector::detectBlobs(CVideoFrame * pFrame, CFrameGrinder* pFrameGrind
 {
     try
     {
-        static struct timespec timeLastCameraFrame = {0};
-        static struct timespec timeNow = {0};
-        static cv::Scalar lowerBounds = cv::Scalar(79,0,150);
-	static cv::Scalar upperBounds = cv::Scalar(96,255,250);
-        
+        static cv::Scalar lowerBounds = cv::Scalar(79, 0, 150);
+        static cv::Scalar upperBounds = cv::Scalar(96, 255, 250);
+
         cv::Mat frame0gray, frame1gray, dispbm, dispsgbm, dispnorm_bm, dispnorm_sgbm, falseColorsMap;
         cv::Mat sfalseColorsMap, descriptors_1, descriptors_2, img_matches, disparity, falsemap, disparity1, H1, H2;
         std::vector<cv::KeyPoint> keypoints_1, keypoints_2;
@@ -115,20 +112,16 @@ void CBlobDetector::detectBlobs(CVideoFrame * pFrame, CFrameGrinder* pFrameGrind
         std::vector<cv::Point2f>imgpts1, imgpts2;
         std::vector<uchar> status;
 
-        double minVal; double maxVal;
+        double minVal;
+        double maxVal;
         double max_dist = 0;
         double min_dist = 100;
-        
+
         static int iCount = 0;
 
-        cv::BFMatcher matcher(cv::NORM_L2, true); 
-        
-        int timeSinceLastCameraFrameMilliseconds = (int) CTestMonitor::getDeltaTimeMilliseconds(
-                timeLastCameraFrame,
-                pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT]);
-        timeLastCameraFrame = pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT];
+        cv::BFMatcher matcher(cv::NORM_L2, true);
 
-        if(pFrame->m_pCameraVideoFrame2 == NULL)  
+        if (pFrame->m_pCameraVideoFrame2 == NULL)
         {
             // Ignore mono frames
             pFrameGrinder->m_testMonitor.monitorQueueTimesBeforeReturnToFreeQueue(pFrame, pFrameGrinder);
@@ -142,57 +135,59 @@ void CBlobDetector::detectBlobs(CVideoFrame * pFrame, CFrameGrinder* pFrameGrind
         cv::cvtColor(pFrame->m_pCameraVideoFrame2->m_frame, frame1gray, CV_BGR2GRAY);
         dbgMsg_s("detectBlobs 01a\n");
 
-        static_sbm->compute( frame0gray, frame1gray, dispbm );
-        cv::minMaxLoc( dispbm, &minVal, &maxVal );
-        dispbm.convertTo( dispnorm_bm, CV_8UC1, 255/(maxVal - minVal));
-       dbgMsg_s("detectBlobs 01b\n");
+        static_sbm->compute(frame0gray, frame1gray, dispbm);
+        cv::minMaxLoc(dispbm, &minVal, &maxVal);
+        dispbm.convertTo(dispnorm_bm, CV_8UC1, 255 / (maxVal - minVal));
+        dbgMsg_s("detectBlobs 01b\n");
 
         static_sgbm->compute(frame0gray, frame1gray, dispsgbm);
-              dbgMsg_s("detectBlobs 01b1\n");
-        cv::minMaxLoc( dispsgbm, &minVal, &maxVal );
-              dbgMsg_s("detectBlobs 01b2\n");
-        dispsgbm.convertTo( dispnorm_sgbm, CV_8UC1, 255/(maxVal - minVal));
-              dbgMsg_s("detectBlobs 01b3\n");
+        dbgMsg_s("detectBlobs 01b1\n");
+        cv::minMaxLoc(dispsgbm, &minVal, &maxVal);
+        dbgMsg_s("detectBlobs 01b2\n");
+        dispsgbm.convertTo(dispnorm_sgbm, CV_8UC1, 255 / (maxVal - minVal));
+        dbgMsg_s("detectBlobs 01b3\n");
         cv::applyColorMap(dispnorm_bm, falseColorsMap, cv::COLORMAP_JET);
-              dbgMsg_s("detectBlobs 01b4\n");
+        dbgMsg_s("detectBlobs 01b4\n");
         cv::applyColorMap(dispnorm_sgbm, sfalseColorsMap, cv::COLORMAP_JET);
-       dbgMsg_s("detectBlobs 01c\n");
+        dbgMsg_s("detectBlobs 01c\n");
 
-        static_f2d->detect( frame0gray, keypoints_1 );
-        static_f2d->detect( frame1gray, keypoints_2 );
-       dbgMsg_s("detectBlobs 01d\n");
+        static_f2d->detect(frame0gray, keypoints_1);
+        static_f2d->detect(frame1gray, keypoints_2);
+        dbgMsg_s("detectBlobs 01d\n");
 
         //-- Step 2: Calculate descriptors (feature vectors)
-        static_fd->compute( frame0gray, keypoints_1, descriptors_1 );
-        static_fd->compute( frame1gray, keypoints_2, descriptors_2 );
-       dbgMsg_s("detectBlobs 01e\n");
+        static_fd->compute(frame0gray, keypoints_1, descriptors_1);
+        static_fd->compute(frame1gray, keypoints_2, descriptors_2);
+        dbgMsg_s("detectBlobs 01e\n");
 
         //-- Step 3: Matching descriptor vectors with a brute force matcher
 
-        matcher.match( descriptors_1, descriptors_2, matches );
+        matcher.match(descriptors_1, descriptors_2, matches);
         cv::drawMatches(frame0gray, keypoints_1, frame1gray, keypoints_2, matches, img_matches);
-       dbgMsg_s("detectBlobs 01f\n");
+        dbgMsg_s("detectBlobs 01f\n");
 
         //-- Quick calculation of max and min distances between keypoints
-        for( int i = 0; i < matches.size(); i++ )
-        { double dist = matches[i].distance;
-           if( dist < min_dist ) min_dist = dist;
-           if( dist > max_dist ) max_dist = dist;
-        } 
+        for (int i = 0; i < matches.size(); i++)
+        {
+            double dist = matches[i].distance;
+            if (dist < min_dist) min_dist = dist;
+            if (dist > max_dist) max_dist = dist;
+        }
         dbgMsg_s("detectBlobs 01\n");
 
-        for( int i = 0; i < matches.size(); i++ )
+        for (int i = 0; i < matches.size(); i++)
         {
-          if( matches[i].distance <= cv::max(4.5*min_dist, 0.02) ){
-              good_matches.push_back( matches[i]);
-              imgpts1.push_back(keypoints_1[matches[i].queryIdx].pt);
-              imgpts2.push_back(keypoints_2[matches[i].trainIdx].pt);
-           }
+            if (matches[i].distance <= cv::max(4.5 * min_dist, 0.02))
+            {
+                good_matches.push_back(matches[i]);
+                imgpts1.push_back(keypoints_1[matches[i].queryIdx].pt);
+                imgpts2.push_back(keypoints_2[matches[i].trainIdx].pt);
+            }
 
         }
         dbgMsg_s("detectBlobs 03\n");
 
-        cv::Mat F = cv::findFundamentalMat(imgpts1, imgpts2, cv::FM_RANSAC, 3., 0.99, status);   //FM_RANSAC
+        cv::Mat F = cv::findFundamentalMat(imgpts1, imgpts2, cv::FM_RANSAC, 3., 0.99, status); //FM_RANSAC
         cv::stereoRectifyUncalibrated(imgpts1, imgpts1, F, frame0gray.size(), H1, H2);
         cv::Mat rectified1(frame0gray.size(), frame0gray.type());
         cv::warpPerspective(frame0gray, rectified1, H1, frame0gray.size());
@@ -201,12 +196,12 @@ void CBlobDetector::detectBlobs(CVideoFrame * pFrame, CFrameGrinder* pFrameGrind
         cv::warpPerspective(frame1gray, rectified2, H2, frame1gray.size());
 
         static_sgbm->compute(rectified1, rectified2, disparity);
-        cv::minMaxLoc( disparity, &minVal, &maxVal );
-        disparity.convertTo( disparity1, CV_8UC1, 255/(maxVal - minVal));
+        cv::minMaxLoc(disparity, &minVal, &maxVal);
+        disparity.convertTo(disparity1, CV_8UC1, 255 / (maxVal - minVal));
         cv::applyColorMap(disparity1, falsemap, cv::COLORMAP_JET);
         dbgMsg_s("detectBlobs 04\n");
 
-        pFrame->m_filteredFrame = falsemap;           // disparity_rectified_color
+        pFrame->m_filteredFrame = falsemap; // disparity_rectified_color
         //pFrame->m_filteredFrame = falseColorsMap;     // BN
         //pFrame->m_filteredFrame = sfalseColorsMap;    // CSGBM
 
@@ -223,41 +218,36 @@ void CBlobDetector::detectBlobs(CVideoFrame * pFrame, CFrameGrinder* pFrameGrind
         int xPixelCenterOfClosestObject;
         int xPixelAvoidClosestObjectRightPath = 0;
         int xPixelAvoidClosestObjectLeftPath = 0;
-                dbgMsg_s("detectBlobs 05\n");
-
-        CTestMonitor::getTicks(&timeNow);
-        int timeLatencyThisCameraFrameMilliseconds = (int) CTestMonitor::getDeltaTimeMilliseconds(
-                pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT],
-                timeNow);
-        dbgMsg_s("detectBlobs 06\n");
+        dbgMsg_s("detectBlobs 05\n");
 
         pFrame->m_targetInfo.updateTargetInfo(
-                timeSinceLastCameraFrameMilliseconds, timeLatencyThisCameraFrameMilliseconds, 
-                isClosestObjectFound, distanceToClosestObjectInches, xPixelCenterOfClosestObject);
-                dbgMsg_s("detectBlobs 07\n");
+                                              isClosestObjectFound, distanceToClosestObjectInches, xPixelCenterOfClosestObject);
+
+        dbgMsg_s("detectBlobs 07\n");
     }
     catch (...)
     {
     }
     dbgMsg_s("End:  detectBlobs\n");
-}               
+}
 
 void CBlobDetector::calibrateRightCam(CVideoFrame* pFrame, CFrameGrinder* pFrameGrinder)
 {
-    
+
 }
+
 void CBlobDetector::calibrateLeftCam(CVideoFrame* pFrame, CFrameGrinder* pFrameGrinder)
 {
-    
+
 }
 
 double CBlobDetector::normalize360(double angle)
 {
-    while(angle >= 360.0)
+    while (angle >= 360.0)
     {
         angle -= 360.0;
     }
-    while(angle < 0.0)
+    while (angle < 0.0)
     {
         angle += 360.0;
     }

@@ -48,6 +48,9 @@
 #include "dbgMsg.h"
 #include "viking_cv_version.h"
 
+struct timespec CTestMonitor::m_timeLastCameraFrame[2] = {0};
+int CTestMonitor::m_timeSinceLastCameraFrame[2] = {0};
+
 CTestMonitor::CTestMonitor()
 {
     init();
@@ -103,8 +106,13 @@ void CTestMonitor::init()
     m_nCountMonoFramesInThisInterval = 0;
     memset(&m_avgElapsedSeconds, 0, sizeof (double)*NUMBER_OF_TIME_IN_TASK);
     memset(&m_savedElapsedSeconds, 0, sizeof (double)*NUMBER_OF_TIME_IN_TASK);
-    m_avgTimeBetweenCameraFramesMilliseconds = 0;
     m_avgLatencyForProcessingFrameMilliseconds = 0;
+    m_avgTimeBetweenCameraFramesMilliseconds[0] = 0;
+    m_avgTimeBetweenCameraFramesMilliseconds[1] = 0;
+    m_sumTimeBetweenCameraFramesMilliseconds[0] = 0;
+    m_sumTimeBetweenCameraFramesMilliseconds[1] = 0;
+
+    memset(&m_timeLastCameraFrame, 0, sizeof (struct timespec));
 }
 
 void CTestMonitor::initVideo(int framesPerSec, unsigned int height, unsigned int width, int codec)
@@ -130,6 +138,13 @@ std::string CTestMonitor::numberToText0000(unsigned int n)
 {
     char buf[128];
     sprintf(buf, "%04d", n);
+    return buf;
+}
+    
+std::string CTestMonitor::timespecToText(const struct timespec& ts)
+{
+    char buf[128];
+    sprintf(buf, "%lld.%.9ld", (long long)ts.tv_sec, ts.tv_nsec);
     return buf;
 }
 
@@ -372,7 +387,10 @@ void CTestMonitor::monitorQueueTimesBeforeReturnToFreeQueue(CVideoFrame* pFrame,
         {
             m_avgElapsedSeconds[i] /= NUMBER_OF_SAMPLES_PER_TEST_INTERVAL;
         }
-        m_avgTimeBetweenCameraFramesMilliseconds /= NUMBER_OF_SAMPLES_PER_TEST_INTERVAL;
+        m_avgTimeBetweenCameraFramesMilliseconds[0] = m_sumTimeBetweenCameraFramesMilliseconds[0] / NUMBER_OF_SAMPLES_PER_TEST_INTERVAL;
+        m_avgTimeBetweenCameraFramesMilliseconds[1] = m_sumTimeBetweenCameraFramesMilliseconds[1] / NUMBER_OF_SAMPLES_PER_TEST_INTERVAL;
+        m_sumTimeBetweenCameraFramesMilliseconds[0] = 0;
+        m_sumTimeBetweenCameraFramesMilliseconds[1] = 0;
         m_avgLatencyForProcessingFrameMilliseconds /= NUMBER_OF_SAMPLES_PER_TEST_INTERVAL;
         memcpy(&m_savedElapsedSeconds, &m_avgElapsedSeconds, sizeof (double)*NUMBER_OF_TIME_IN_TASK);
         sLine += displayQueueTimes(timeIntervalSeconds, pFrameGrinder);
@@ -388,7 +406,8 @@ void CTestMonitor::monitorQueueTimesBeforeReturnToFreeQueue(CVideoFrame* pFrame,
         m_nIntervalisClosestObjectFound = 0;
 
         memset(&m_avgElapsedSeconds, 0, sizeof (unsigned int)*NUMBER_OF_TIME_IN_TASK);
-        m_avgTimeBetweenCameraFramesMilliseconds = 0;
+        m_avgTimeBetweenCameraFramesMilliseconds[0] = 0;
+        m_avgTimeBetweenCameraFramesMilliseconds[1] = 0;
         m_avgLatencyForProcessingFrameMilliseconds = 0;
 
         // 'true' is returned when the end of the interval is reached
@@ -438,8 +457,23 @@ void CTestMonitor::monitorQueueTimesBeforeReturnToFreeQueue(CVideoFrame* pFrame,
     m_avgElapsedSeconds[TIME_TOTAL_CAMDONE_TO_TEXTDONE] += getDeltaTimeSeconds(
                                                                                pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BLOB_DETECT],
                                                                                pFrame->m_timeAddedToQueue[(int) CVideoFrame::FRAME_QUEUE_WAIT_FOR_BROWSER_CLIENT]);
-    m_avgTimeBetweenCameraFramesMilliseconds += pFrame->m_targetInfo.getTimeSinceLastCameraFrameMilliseconds();
+    m_sumTimeBetweenCameraFramesMilliseconds[0] += CTestMonitor::getTimeSinceLastCameraFrame(0);
+    m_sumTimeBetweenCameraFramesMilliseconds[1] += CTestMonitor::getTimeSinceLastCameraFrame(1);
     m_avgLatencyForProcessingFrameMilliseconds += pFrame->m_targetInfo.getTimeLatencyThisCameraFrameMilliseconds();
+}
+
+void CTestMonitor::updateTimeSinceLastCameraFrame(int idCamera)
+{
+    struct timespec timeNow = {0};
+    CTestMonitor::getTicks(&timeNow);
+
+    int idx = 0;
+    if (0 != idCamera)
+    {
+        idx = 1;
+    }   
+    m_timeSinceLastCameraFrame[idx] = (int) getDeltaTimeMilliseconds(m_timeLastCameraFrame[idx], timeNow);
+    m_timeLastCameraFrame[idx] = timeNow;
 }
 
 void CTestMonitor::padString(std::string& str, int desiredLength)
@@ -513,10 +547,18 @@ std::string CTestMonitor::displayQueueTimes(double timeIntervalSeconds, CFrameGr
     sprintf(buf, "viking_cv Version %d.%d.%d    Interval:  %02f sec", VERSION_YEAR, VERSION_INTERFACE, VERSION_BUILD, timeIntervalSeconds);
     sRet += buf;
     sRet += "\n";
-
-    sprintf(buf, "avgTimeBetweenCameraFrames: %0.2fms    avgLatencyForProcessingFrame: %0.2fms", m_avgTimeBetweenCameraFramesMilliseconds, m_avgLatencyForProcessingFrameMilliseconds);
+    sRet += "avgTimeBetweenCameraFrames: ";
+    dTemp = m_avgTimeBetweenCameraFramesMilliseconds[0];
+    sprintf(buf, "%0.2f", dTemp);
     sRet += buf;
-    sRet += "\n\n";
+    sRet += "ms/";
+    dTemp = m_avgTimeBetweenCameraFramesMilliseconds[1];
+    sprintf(buf, "%0.2f", dTemp);
+    sRet += buf;
+    sRet += "ms    avgLatencyForProcessingFrame: ";
+    sprintf(buf, "a%0.2f", m_avgLatencyForProcessingFrameMilliseconds);
+    sRet += buf;
+    sRet += "ms\n\n";
 
     return sRet;
 }

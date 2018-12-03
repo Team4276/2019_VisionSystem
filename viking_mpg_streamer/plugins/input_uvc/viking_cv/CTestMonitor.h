@@ -53,7 +53,8 @@ public:
     static double getDeltaTimeSeconds(struct timespec timeStart, struct timespec timeEnd);
     static void getTicks(struct timespec* pTime);
     static std::string displayQueueLengths(const CFrameGrinder* pFrameGrinder);
-
+    static void updateTimeSinceLastCameraFrame(int idCamera);  // 0 or 1
+ 
     typedef enum
     {
         TASK_DONE_CAM1,
@@ -68,6 +69,16 @@ public:
     unsigned int m_nTasksDone[NUMBER_OF_TASK_DONE_TYPES];
     unsigned int m_nCountStereoFramesInThisInterval;
     unsigned int m_nCountMonoFramesInThisInterval;
+    
+    static std::string numberToText(unsigned int n);
+    static std::string numberToText00(unsigned int n);
+    static std::string numberToText0000(unsigned int n);
+    static std::string timespecToText(const struct timespec& ts);
+
+    static int getTimeSinceLastCameraFrame(int idx)
+    {
+        return m_timeSinceLastCameraFrame[idx];
+    }
 
 private:
     bool enableVideoCollection(bool bEnable, int framesPerSec, unsigned int height, unsigned int width, int codec);
@@ -75,9 +86,6 @@ private:
     std::string getNextFilePath(const std::string& sFolderPath);
     std::string getLogFilePath();
     void deleteFileByNumberIfExists(unsigned int nFile, const std::string& sFolderPath);
-    static std::string numberToText(unsigned int n);
-    static std::string numberToText00(unsigned int n);
-    static std::string numberToText0000(unsigned int n);
 
 
 private:
@@ -112,12 +120,15 @@ private:
     // Running totals for current test interval
     unsigned int m_nIntervalisClosestObjectFound;
     double m_avgElapsedSeconds[NUMBER_OF_TIME_IN_TASK];
-    double m_avgTimeBetweenCameraFramesMilliseconds;
     double m_avgLatencyForProcessingFrameMilliseconds;
+    
+    double m_sumTimeBetweenCameraFramesMilliseconds[2];
+    double m_avgTimeBetweenCameraFramesMilliseconds[2];
 
     // Averages from last test interval
     double m_savedElapsedSeconds[NUMBER_OF_TIME_IN_TASK];
-
+    static struct timespec m_timeLastCameraFrame[2];
+    static int m_timeSinceLastCameraFrame[2];
 };
 
 #endif	/* CTESTMONITOR_H */

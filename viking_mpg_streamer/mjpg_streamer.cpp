@@ -197,15 +197,23 @@ int main(int argc, char *argv[])
     int daemon = 0, i;
     size_t tmp = 0;
             
-    input[0] = (char*)"input_uvc.so --resolution 640x480 --fps 5 --device /dev/video0";
-    input[1] = (char*)"input_uvc.so --resolution 640x480 --fps 5 --device /dev/video1";
-    input[2] = 0;
-    global.incnt = 2;
+
+    std::string sPath = "/dev/video1";
+    bool isExistSecondVideoCamera =  (access(sPath.c_str(), F_OK) != -1);
+
+    int idx = 0;
+    input[idx++] = (char*)"input_uvc.so --resolution 640x480 --fps 30 --device /dev/video0";
+    if(isExistSecondVideoCamera)
+    {
+        printf("Found second video camera: /dev/video1\n");
+        input[idx++] = (char*)"input_uvc.so --resolution 640x480 --fps 30 --device /dev/video1";
+    }
+    input[idx++] = 0;
+    global.incnt = idx-1;
    
     output[0] = (char*)"output_http.so --port 5800 -w /usr/local/www";
     output[1] = 0;
     global.outcnt = 1;
-
 
     /* parameter parsing */
     while(1) {

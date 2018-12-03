@@ -53,7 +53,8 @@ CTargetInfo::~CTargetInfo()
 void CTargetInfo::init()
 {
     m_targetInfoText = "";
-    m_timeSinceLastCameraFrameMilliseconds = 0;
+    m_timeSinceLastCameraFrameMilliseconds[0] = 0;
+    m_timeSinceLastCameraFrameMilliseconds[1] = 0;
     m_timeLatencyThisCameraFrameMilliseconds = 0;
     m_isClosestObjectFound = false;
     m_distanceToClosestObjectInches = 0.0;
@@ -63,16 +64,11 @@ void CTargetInfo::init()
 }
 
 void CTargetInfo::updateTargetInfo(
-        int timeSinceLastCameraFrameMilliseconds,
-        int timeLatencyThisCameraFrameMilliseconds,
-        bool isClosestObjectFound,
-        double distanceToClosestObjectInches,
-        int xPixelCenterOfClosestObject)
+                                   bool isClosestObjectFound,
+                                   double distanceToClosestObjectInches,
+                                   int xPixelCenterOfClosestObject)
 {
     init();
-
-    m_timeSinceLastCameraFrameMilliseconds = timeSinceLastCameraFrameMilliseconds;
-    m_timeLatencyThisCameraFrameMilliseconds = timeLatencyThisCameraFrameMilliseconds;
 
     // isFound() is needed for frame annotation,  even ifCV is not oriented)
     m_isClosestObjectFound = isClosestObjectFound;
@@ -89,6 +85,12 @@ void CTargetInfo::updateTargetInfo(
     }
 }
 
+void CTargetInfo::updateLatency(
+                                int timeLatencyThisCameraFrameMilliseconds)
+{
+    m_timeLatencyThisCameraFrameMilliseconds;
+}
+
 void CTargetInfo::initTargetInfoFromText(const std::string& targetInfoText)
 {
     // Transmit on;y - no need for this conversion 
@@ -102,6 +104,6 @@ std::string CTargetInfo::initFormattedTextFromTargetInfo()
             m_isClosestObjectFound,
             (int) (m_xPixelCenterOfClosestObject * 10),
             (int) m_distanceToClosestObjectInches);
-     m_targetInfoText = buf;
+    m_targetInfoText = buf;
     return m_targetInfoText;
 }

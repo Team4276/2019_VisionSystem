@@ -46,18 +46,24 @@ public:
         return m_targetInfoText;
     }
     void updateTargetInfo(
-            int timeSinceLastCameraFrameMilliseconds,
-            int timeLatencyThisCameraFrameMilliseconds, 
             bool isClosestObjectFound,
             double distanceToClosestObjectInches,
             int xPixelCenterOfClosestObject);
-
+    
+   void updateLatency(
+           int timeLatencyThisCameraFrameMilliseconds);
+ 
     void initTargetInfoFromText(const std::string& targetInfoText);
 
     /* Not absolute time -- use for relative time between samples */
-    int getTimeSinceLastCameraFrameMilliseconds()
+    int getTimeSinceLastCameraFrameMilliseconds(int idx)
     {
-        return m_timeSinceLastCameraFrameMilliseconds;
+        return m_timeSinceLastCameraFrameMilliseconds[idx];
+    }
+    
+    void setTimeSinceLastCameraFrameMilliseconds(int idx, int iMillisecs)
+    {
+        m_timeSinceLastCameraFrameMilliseconds[idx] = iMillisecs;
     }
 
     int getTimeLatencyThisCameraFrameMilliseconds()
@@ -89,7 +95,7 @@ private:
 
 
     std::string m_targetInfoText;
-    int m_timeSinceLastCameraFrameMilliseconds;
+    int m_timeSinceLastCameraFrameMilliseconds[2];
     int m_timeLatencyThisCameraFrameMilliseconds;
     bool m_isClosestObjectFound;
     double m_distanceToClosestObjectInches;

@@ -240,6 +240,10 @@ void* browser_server_thread(void* pVoid)
                         if (!pFrame->m_frame.empty())
                         {
                             pFrameGrinder->m_testMonitor.saveFrameToJpeg(pFrame->m_frame);
+                            if ((pFrame->m_pCameraVideoFrame2 != NULL) && (!pFrame->m_pCameraVideoFrame2->m_frame.empty()))
+                            {
+                                pFrameGrinder->m_testMonitor.saveFrameToJpeg(pFrame->m_pCameraVideoFrame2->m_frame);
+                            }
                             cv::imencode(".jpg", pFrame->m_frame, buf, qualityType);
                         }
                         break;
