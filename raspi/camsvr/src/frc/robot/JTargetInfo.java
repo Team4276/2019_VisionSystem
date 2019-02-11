@@ -34,8 +34,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public class JTargetInfo {
-	public static final String ipAddressRaspberryPi = "172.16.0.8";
-	public static final String ipAddressRoboRio = "172.16.10.2";
+	public static final String ipAddressRaspberryPi = "10.42.76.8";
+	public static final String ipAddressRoboRio = "10.42.76.2";
     
     // user ports must be between 1180 and 1190
 	public static final int textPortRoboRioReceive= 1180;  // Where the UDP packet will be sent
