@@ -1,44 +1,98 @@
+/*******************************************************************************************/
+/* The MIT License (MIT)                                                                   */
+/*                                                                                         */
+/* Copyright (c) 2014 - Marina High School FIRST Robotics Team 4276 (Huntington Beach, CA) */
+/*                                                                                         */
+/* Permission is hereby granted, free of charge, to any person obtaining a copy            */
+/* of this software and associated documentation files (the "Software"), to deal           */
+/* in the Software without restriction, including without limitation the rights            */
+/* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell               */
+/* copies of the Software, and to permit persons to whom the Software is                   */
+/* furnished to do so, subject to the following conditions:                                */
+/*                                                                                         */
+/* The above copyright notice and this permission notice shall be included in              */
+/* all copies or substantial portions of the Software.                                     */
+/*                                                                                         */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR              */
+/* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,                */
+/* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE             */
+/* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER                  */
+/* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,           */
+/* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN               */
+/* THE SOFTWARE.                                                                           */
+/*******************************************************************************************/
+
+/*******************************************************************************************/
+/* We are a high school robotics team and always in need of financial support.             */
+/* If you use this software for commercial purposes please return the favor and donate     */
+/* (tax free) to "Marina High School Educational Foundation"  (Huntington Beach, CA)       */
+/*******************************************************************************************/
+
 package frc.robot;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfPoint;
-import org.opencv.core.Point;
-import org.opencv.core.Rect;
-import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
 
 import edu.wpi.cscore.CvSink;
-import edu.wpi.cscore.CvSource;
 import edu.wpi.cscore.MjpegServer;
 import edu.wpi.cscore.UsbCamera;
-import edu.wpi.cscore.VideoMode;
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class Main {
 
+	public static JVideoFrameQueue myFrameQueue_FREE = null;
+	public static JVideoFrameQueue myFrameQueue_WAIT_FOR_BLOB_DETECT = null;
+	public static JVideoFrameQueue myFrameQueue_WAIT_FOR_TEXT_CLIENT = null;
+	public static JVideoFrameQueue myFrameQueue_WAIT_FOR_BROWSER_CLIENT = null;
+
 	private static Boolean useSingleJpegInseadOfCamera = false;
-	private static final int FRAME_WIDTH = 640;
-	private static final int FRAME_HEIGHT = 480;
+	static final int FRAME_WIDTH = 640;
+	static final int FRAME_HEIGHT = 480;
 
-	private static CameraCalibration cam1Calibration = new CameraCalibration();
+	private static final int MAX_FRAMES = 32;
 
-	private final static Object imgLock = new Object();
-	private static GripPipeline myGripPipeline = null;
+	private static Thread m_gripThread = null;
+	private static Thread m_textThread = null;
+	private static Thread m_streamThread = null;
 
-	public static void main(String[] args) throws FileNotFoundException,
-			IOException {
+	private static int nSequence = 0;
+
+	public static void main(String[] args) throws FileNotFoundException, IOException {
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
+				System.exit(0);
+			}
+		});
+
 		// Loads our OpenCV library. This MUST be included
 		System.out.println("java.libary.path = "
 				+ System.getProperty("java.library.path"));
 		System.loadLibrary("opencv");
 
-		myGripPipeline = new GripPipeline();
+		myFrameQueue_FREE = new JVideoFrameQueue(JFrameQueueType.FREE);
+		myFrameQueue_WAIT_FOR_BLOB_DETECT = new JVideoFrameQueue(
+				JFrameQueueType.WAIT_FOR_BLOB_DETECT);
+		myFrameQueue_WAIT_FOR_TEXT_CLIENT = new JVideoFrameQueue(
+				JFrameQueueType.WAIT_FOR_TEXT_CLIENT);
+		myFrameQueue_WAIT_FOR_BROWSER_CLIENT = new JVideoFrameQueue(
+				JFrameQueueType.WAIT_FOR_BROWSER_CLIENT);
+
+		for (int i = 0; i < MAX_FRAMES; i++) {
+			myFrameQueue_FREE.addTail(new JVideoFrame());
+		}
+
+		m_gripThread = new Thread(new QGripThreadRunnable());
+		m_gripThread.start();
+
+		m_textThread = new Thread(new QTextThreadRunnable());
+		m_textThread.start();
+
+		m_streamThread = new Thread(new QStreamThreadRunnable());
+		m_streamThread.start();
 
 		// Connect NetworkTables, and get access to the publishing table
 		NetworkTable.setClientMode();
@@ -48,14 +102,10 @@ public class Main {
 		// RoboRIO required for testing with the following line uncommented
 		// NetworkTable.initialize();
 
-		// This is the network port you want to stream the raw received image to
-		// By rules, this has to be between 1180 and 1190, so 1185 is a good
-		// choice
-		int streamPort = 1185;
-
 		// This stores our reference to our mjpeg server for streaming the input
 		// image
-		MjpegServer inputStream = new MjpegServer("MJPEG Server", streamPort);
+		MjpegServer inputStream = new MjpegServer("MJPEG Server",
+				JTargetInfo.streamSourcePortOnRaspberryPi);
 
 		// Selecting a Camera
 		// Uncomment one of the 2 following camera options
@@ -96,6 +146,7 @@ public class Main {
 			// that can be used
 			// Set the resolution for our camera, since this is over USB
 			camera.setResolution(640, 480);
+			camera.setFPS(10);
 
 			// This creates a CvSink for us to use. This grabs images from our
 			// selected
@@ -105,42 +156,10 @@ public class Main {
 			imageSink.setSource(camera);
 		}
 
-		// This creates a CvSource to use. This will take in a Mat image that
-		// has had
-		// OpenCV operations
-		// operations
-		CvSource imageSource = new CvSource("CV Image Source",
-				VideoMode.PixelFormat.kMJPEG, FRAME_WIDTH, FRAME_HEIGHT, 30);
-		MjpegServer cvStream = new MjpegServer("CV Image Stream", 1186);
-		cvStream.setSource(imageSource);
-
-		// All Mats and Lists should be stored outside the loop to avoid
-		// allocations
-		// as they are expensive to create
-		int rows = FRAME_HEIGHT;
-		int cols = FRAME_WIDTH;
-		int type = CvType.CV_8UC3;
-
-		double[] dMatrix = {
-				2.9482783765726424e+02, 0., 3.1480862269626300e+02, 0.,
-			       2.9482783765726424e+02, 2.3886484081310755e+02, 0., 0., 1.
-		};
-		Mat cameraMatrix = new Mat( 3, 3, CvType.CV_64FC1 );
-		int row = 0, col = 0;
-		cameraMatrix.put(row ,col, dMatrix);
-		
-		double dDist[] = {
-				-2.7415242407561496e-01, 6.0732740115875483e-02, 0., 0.,
-			       -5.5934428233374665e-03
-		};
-		Mat distCoeffs = new Mat( 1, 5, CvType.CV_64FC1 );
-		distCoeffs.put(row ,col, dDist);
-
 		// Infinitely process image
-		int iCount = 0;
+		int type = CvType.CV_8UC3;
 		while (true) {
-			Mat inputImage = new Mat(rows, cols, type);
-			Mat undistortedImage = new Mat();
+			Mat inputImage = new Mat(FRAME_HEIGHT, FRAME_WIDTH, type);
 			if (useSingleJpegInseadOfCamera) {
 				inputImage = Imgcodecs
 						.imread("/home/pi/cam170_rocket_00deg_06ft_edit.JPG");
@@ -155,45 +174,60 @@ public class Main {
 				}
 			}
 
-			Imgproc.undistort(inputImage, undistortedImage, cameraMatrix, distCoeffs);
-
-			myGripPipeline.process(inputImage);
-			ArrayList<MatOfPoint> contours = myGripPipeline
-					.findContoursOutput();
-			if (contours.isEmpty()) {
-				imageSource.putFrame(inputImage);
-			} else {
-				Rect rectLargest = new Rect();
-				double largestArea = 0.0;
-				int idxLargestContour = 0;
-				for (int i = 0; i < contours.size(); i++) {
-					Rect rectContour = Imgproc.boundingRect(contours.get(i));
-					double area = rectContour.width * rectContour.height;
-					if (largestArea < area) {
-						largestArea = area;
-						rectLargest = rectContour;
-						idxLargestContour = i;
+			JVideoFrame frm = myFrameQueue_FREE.removeHead();
+			if (frm == null) {
+				// 'No free frames'
+				// Try to steal an old packet from one of the active queues
+				if (myFrameQueue_WAIT_FOR_BLOB_DETECT.size() > 1) {
+					frm = myFrameQueue_WAIT_FOR_BLOB_DETECT.removeHead();
+					if (frm != null) {
+						myFrameQueue_WAIT_FOR_BLOB_DETECT.m_droppedFrames++;
+					} else {
+						if (myFrameQueue_WAIT_FOR_TEXT_CLIENT.size() > 1) {
+							frm = myFrameQueue_WAIT_FOR_TEXT_CLIENT
+									.removeHead();
+							if (frm != null) {
+								myFrameQueue_WAIT_FOR_TEXT_CLIENT.m_droppedFrames++;
+							} else {
+								if (myFrameQueue_WAIT_FOR_BROWSER_CLIENT.size() > 1) {
+									frm = myFrameQueue_WAIT_FOR_BROWSER_CLIENT
+											.removeHead();
+									if (frm != null) {
+										myFrameQueue_WAIT_FOR_BROWSER_CLIENT.m_droppedFrames++;
+									}
+								}
+							}
+						}
 					}
 				}
-				double centerX = rectLargest.x + (rectLargest.width / 2);
-				double centerY = rectLargest.y + (rectLargest.height / 2);
-				float radius = Math.min(rectLargest.width, rectLargest.height);
-				Scalar colorBlue = new Scalar(0, 0, 255);
-				Scalar colorRed = new Scalar(255, 0, 0);
-				synchronized (imgLock) {
-					Point pt1 = new Point(centerX - radius, centerY);
-					Point pt2 = new Point(centerX + radius, centerY);
-					Imgproc.line(inputImage, pt1, pt2, colorBlue);
-					Point pt3 = new Point(centerX, centerY - radius);
-					Point pt4 = new Point(centerX, centerY + radius);
-					Imgproc.line(inputImage, pt3, pt4, colorBlue);
-					Imgproc.drawContours(inputImage, contours,
-							idxLargestContour, colorRed);
-				}
-				//imageSource.putFrame(inputImage);
-				imageSource.putFrame(undistortedImage);
-				iCount++;
 			}
+			if (frm == null) {
+				System.out.printf("* RESOURCE LEAK -- no packets avalable\n");
+				continue;
+			}
+
+			frm.m_targetInfo.init();
+			frm.m_targetInfo.nSequence = Main.nSequence++;
+
+			if (0 == (frm.m_targetInfo.nSequence % 50)) {
+				System.out
+						.printf("\n\nFrame Queues --> FREE: %d   BLOB: %d  TEXT: %d  BROWSER: %d\n",
+								Main.myFrameQueue_FREE.size(),
+								Main.myFrameQueue_WAIT_FOR_BLOB_DETECT.size(),
+								Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.size(),
+								Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT
+										.size());
+				System.out
+						.printf("     Dropped --> FREE: %d   BLOB: %d  TEXT: %d  BROWSER: %d\n",
+								Main.myFrameQueue_FREE.m_droppedFrames,
+								Main.myFrameQueue_WAIT_FOR_BLOB_DETECT.m_droppedFrames,
+								Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.m_droppedFrames,
+								Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT.m_droppedFrames);
+			}
+
+			frm.m_frame = inputImage;
+
+			myFrameQueue_WAIT_FOR_BLOB_DETECT.addTail(frm);
 		}
 	}
 

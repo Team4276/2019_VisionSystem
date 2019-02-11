@@ -30,15 +30,54 @@
 
 package frc.robot;
 
-import org.opencv.core.RotatedRect;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.Arrays;
 
-public class CargoBay {
-	RotatedRect m_rectLeft;
-	RotatedRect m_rectRight;
+public class QTextThreadRunnable implements Runnable {
+	public boolean isShuttingDown = false;
+	
+	static InetAddress ipAddressRoboRio = null;
 
-	CargoBay(RotatedRect lft, RotatedRect rt) {
-		m_rectLeft = lft;
-		m_rectRight = rt;
+	private DatagramSocket socket;
+
+	@Override
+	public void run() {
+		try {
+			socket = new DatagramSocket(JTargetInfo.textPortRoboRioReceive);
+		} catch (SocketException e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			ipAddressRoboRio = InetAddress.getByName(JTargetInfo.ipAddressRoboRio);
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+
+		while (!isShuttingDown) {
+			JVideoFrame frm = Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.dropOlderAndRemoveHead();
+			if (frm == null) {
+				continue;
+			}
+
+			String sMsg = frm.m_targetInfo.numberToText();
+			DatagramPacket packet = new DatagramPacket(sMsg.getBytes(), sMsg.length(), ipAddressRoboRio, JTargetInfo.textPortRoboRioReceive);
+			try {
+				socket.send(packet);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT.addTail(frm);
+		}
 	}
 
 }

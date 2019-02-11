@@ -1,3 +1,6 @@
+package frc.robot;
+import java.util.concurrent.LinkedBlockingDeque;
+
 /*******************************************************************************************/
 /* The MIT License (MIT)                                                                   */
 /*                                                                                         */
@@ -28,17 +31,87 @@
 /* (tax free) to "Marina High School Educational Foundation"  (Huntington Beach, CA)       */
 /*******************************************************************************************/
 
-package frc.robot;
 
-import org.opencv.core.RotatedRect;
+public class JVideoFrameQueue 
+{
+    public JFrameQueueType m_eQueueType;
+    public int m_droppedFrames;
 
-public class CargoBay {
-	RotatedRect m_rectLeft;
-	RotatedRect m_rectRight;
+    private LinkedBlockingDeque<JVideoFrame> m_queue;
 
-	CargoBay(RotatedRect lft, RotatedRect rt) {
-		m_rectLeft = lft;
-		m_rectRight = rt;
+	JVideoFrameQueue(JFrameQueueType eQueueType)
+	{
+	    m_eQueueType = eQueueType;
+	    m_queue = new LinkedBlockingDeque<JVideoFrame>();
 	}
+	
+	public int size()
+	{
+		return m_queue.size();
+	}
+	
+	boolean addTail(JVideoFrame frm)
+	{
+		if(m_queue.add(frm))
+		{
+			frm.m_timeAddedToQueue[m_eQueueType.toInt()] = System.nanoTime();
+			return true;
+		}
+		if(m_eQueueType != JFrameQueueType.FREE)
+		{
+			Main.myFrameQueue_FREE.addTail(frm);
+		}
+		else
+		{
+			System.out.printf("JVideoFrameQueue RESOURCE LEAK --> Unable to return frame to the free queue\n");			
+		}
+		return false;
+	}
+	
+	JVideoFrame removeHead()
+	{
+		if(m_eQueueType == JFrameQueueType.FREE)
+		{
+			if(m_queue.isEmpty())
+			{
+				return null;
+			}
+		}
 
+
+		try 
+		{
+			// Waits for a frame if none in the queue
+			JVideoFrame frm = m_queue.take();
+			frm.m_timeAddedToQueue[m_eQueueType.toInt()] = System.nanoTime();
+			return frm; 
+		}
+		catch(Exception e)
+		{
+			System.out.printf("JVideoFrameQueue remove exception  %s\n", e.getMessage());
+		}
+		return null;
+	}
+	
+	JVideoFrame dropOlderAndRemoveHead()
+	{
+		while(m_queue.size() > 0) 
+		{
+			if(m_queue.size() == 1)
+			{
+				return removeHead();				
+			}
+			JVideoFrame frm = removeHead();
+			m_droppedFrames++;
+			if(m_eQueueType != JFrameQueueType.FREE)
+			{
+				Main.myFrameQueue_FREE.addTail(frm);
+			}
+			else
+			{
+				System.out.printf("[2] JVideoFrameQueue RESOURCE LEAK --> Unable to return frame to the free queue\n");			
+			}
+		}
+		return removeHead();				
+	}
 }

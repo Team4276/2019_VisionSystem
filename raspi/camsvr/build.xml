@@ -52,7 +52,7 @@
         <antcall target="build"/>
     </target>
     <target name="Main">
-        <java classname="org.usfirst.frc.team4276.vision.Main" failonerror="true" fork="yes">
+        <java classname="frc.robot.Main" failonerror="true" fork="yes">
             <env key="LD_LIBRARY_PATH" value="/home/pi/2019_VisionSystem/raspi/camsvr/lib/native_armhf"/>
             <classpath refid="camsvr.classpath"/>
         </java>

@@ -30,15 +30,29 @@
 
 package frc.robot;
 
-import org.opencv.core.RotatedRect;
+import org.opencv.core.Mat;
 
-public class CargoBay {
-	RotatedRect m_rectLeft;
-	RotatedRect m_rectRight;
+public class JVideoFrame {
+	Mat m_frame;
+	Mat m_filteredFrame;
+	long[] m_timeAddedToQueue = new long[JFrameQueueType.values().length];
+	long[] m_timeRemovedFromQueue = new long[JFrameQueueType.values().length];
+	JTargetInfo m_targetInfo;
 
-	CargoBay(RotatedRect lft, RotatedRect rt) {
-		m_rectLeft = lft;
-		m_rectRight = rt;
+	JVideoFrame() {
+		init();
 	}
 
+	void init() {
+		if(m_targetInfo != null)
+		{
+			m_targetInfo = null;
+		}
+		m_targetInfo = new JTargetInfo();
+		m_targetInfo.init();
+		for (int i = 0; i < JFrameQueueType.values().length; i++) {
+			m_timeAddedToQueue[i] = 0;
+			m_timeRemovedFromQueue[i] = 0;
+		}
+	}
 }

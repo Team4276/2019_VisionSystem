@@ -30,15 +30,34 @@
 
 package frc.robot;
 
-import org.opencv.core.RotatedRect;
+import edu.wpi.cscore.CvSource;
+import edu.wpi.cscore.MjpegServer;
+import edu.wpi.cscore.VideoMode;
 
-public class CargoBay {
-	RotatedRect m_rectLeft;
-	RotatedRect m_rectRight;
+public class QStreamThreadRunnable implements Runnable {
+	public boolean isShuttingDown = false;
 
-	CargoBay(RotatedRect lft, RotatedRect rt) {
-		m_rectLeft = lft;
-		m_rectRight = rt;
+	@Override
+	public void run() {
+		CvSource imageSource = new CvSource("CV Image Source", VideoMode.PixelFormat.kMJPEG, Main.FRAME_WIDTH,
+				Main.FRAME_HEIGHT, 30);
+
+		// This creates a CvSource to use. This will take in a Mat image that
+		// has had
+		// OpenCV operations
+		// operations
+		MjpegServer cvStream = new MjpegServer("CV Image Stream", JTargetInfo.streamAnnotatedSourcePortOnRaspberryPi);
+		cvStream.setSource(imageSource);
+
+		while (!isShuttingDown) {
+			JVideoFrame frm = Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT.dropOlderAndRemoveHead();
+			if (frm == null) {
+				continue;
+			}
+			imageSource.putFrame(frm.m_filteredFrame);
+
+			Main.myFrameQueue_FREE.addTail(frm);
+		}
 	}
 
 }
