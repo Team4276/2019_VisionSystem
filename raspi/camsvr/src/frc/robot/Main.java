@@ -146,7 +146,7 @@ public class Main {
 			// that can be used
 			// Set the resolution for our camera, since this is over USB
 			camera.setResolution(640, 480);
-			camera.setFPS(10);
+			camera.setFPS(60);
 
 			// This creates a CvSink for us to use. This grabs images from our
 			// selected
@@ -157,6 +157,8 @@ public class Main {
 		}
 
 		// Infinitely process image
+		int iDropCount = 0;
+		long timeStartBatch = System.nanoTime();
 		int type = CvType.CV_8UC3;
 		while (true) {
 			Mat inputImage = new Mat(FRAME_HEIGHT, FRAME_WIDTH, type);
@@ -223,6 +225,15 @@ public class Main {
 								Main.myFrameQueue_WAIT_FOR_BLOB_DETECT.m_droppedFrames,
 								Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.m_droppedFrames,
 								Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT.m_droppedFrames);
+				int iTotalDropped = Main.myFrameQueue_FREE.m_droppedFrames 
+						+ Main.myFrameQueue_WAIT_FOR_BLOB_DETECT.m_droppedFrames
+						+ Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.m_droppedFrames
+						+ Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT.m_droppedFrames;
+				long timeDelta = System.nanoTime() - timeStartBatch;
+				timeDelta /= 1000000;  // convert to millisecs
+				System.out.printf("timeThisBatch = %d ms.   timePerFrame = %d ms.   Dropped %d / 50\n", timeDelta, timeDelta/50, (iTotalDropped - iDropCount));
+				iDropCount = iTotalDropped;
+				timeStartBatch = System.nanoTime();
 			}
 
 			frm.m_frame = inputImage;
