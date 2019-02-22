@@ -46,7 +46,6 @@ public class QTextThreadRunnable implements Runnable {
 
 	private DatagramSocket socket;
 
-	@Override
 	public void run() {
 		try {
 			socket = new DatagramSocket(JTargetInfo.textPortRoboRioReceive);

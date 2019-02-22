@@ -49,9 +49,10 @@ public class Main {
 	public static JVideoFrameQueue myFrameQueue_WAIT_FOR_TEXT_CLIENT = null;
 	public static JVideoFrameQueue myFrameQueue_WAIT_FOR_BROWSER_CLIENT = null;
 
-	private static Boolean useSingleJpegInseadOfCamera = false;
+	private static boolean useSingleJpegInseadOfCamera = true;
 	static final int FRAME_WIDTH = 640;
 	static final int FRAME_HEIGHT = 480;
+	static final int FRAME_CENTER_PIXEL_X = FRAME_WIDTH / 2;
 
 	private static final int MAX_FRAMES = 32;
 
@@ -164,7 +165,7 @@ public class Main {
 			Mat inputImage = new Mat(FRAME_HEIGHT, FRAME_WIDTH, type);
 			if (useSingleJpegInseadOfCamera) {
 				inputImage = Imgcodecs
-						.imread("/home/pi/cam170_rocket_00deg_06ft_edit.JPG");
+						.imread("/home/pi/camtest/Snapshot_20190119_17.JPG");
 				// inputImage = Imgcodecs.imwrite("/home/pi/t.JPG", inputImage);
 			} else {
 				// Grab a frame. If it has a frame time of 0, there was an

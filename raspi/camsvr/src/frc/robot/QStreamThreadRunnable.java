@@ -37,7 +37,6 @@ import edu.wpi.cscore.VideoMode;
 public class QStreamThreadRunnable implements Runnable {
 	public boolean isShuttingDown = false;
 
-	@Override
 	public void run() {
 		CvSource imageSource = new CvSource("CV Image Source", VideoMode.PixelFormat.kMJPEG, Main.FRAME_WIDTH,
 				Main.FRAME_HEIGHT, 30);

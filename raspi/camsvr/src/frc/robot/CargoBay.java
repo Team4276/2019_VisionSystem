@@ -35,10 +35,25 @@ import org.opencv.core.RotatedRect;
 public class CargoBay {
 	RotatedRect m_rectLeft;
 	RotatedRect m_rectRight;
+	
+	public CargoBay() {
+		m_rectLeft = new RotatedRect();
+		m_rectRight = new RotatedRect();
+	}
 
 	CargoBay(RotatedRect lft, RotatedRect rt) {
 		m_rectLeft = lft;
 		m_rectRight = rt;
+	}
+	
+	public void init() {
+		CargoBayFinder.initRotatedRect(m_rectLeft);
+		CargoBayFinder.initRotatedRect(m_rectRight);
+	}
+
+	public double centerX() 
+	{
+		return (m_rectRight.center.x - m_rectLeft.center.x) / 2;
 	}
 
 }
