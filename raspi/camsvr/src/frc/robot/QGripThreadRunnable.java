@@ -108,35 +108,37 @@ public class QGripThreadRunnable implements Runnable {
 			//Imgproc.undistort(frm.m_frame, frm.m_filteredFrame, cameraMatrix, distCoeffs);
 			frm.m_filteredFrame = frm.m_frame;
 			
+		frm.m_targetInfo.isCargoBayDetected = false;
 			myGripPipeline.process(frm.m_frame);
 			ArrayList<MatOfPoint> contours = myGripPipeline.findContoursOutput();
+			
 			if (!contours.isEmpty()) {
-				Rect rectLargest = new Rect();
-				double largestArea = 0.0;
-				int idxLargestContour = 0;
-				for (int i = 0; i < contours.size(); i++) {
-					Rect rectContour = Imgproc.boundingRect(contours.get(i));
-					double area = rectContour.width * rectContour.height;
-					if (largestArea < area) {
-						largestArea = area;
-						rectLargest = rectContour;
-						idxLargestContour = i;
-					}
+				myCargoBayFinder.initFromContours(contours);
+				if(myCargoBayFinder.m_nValidCargoBay > 0)
+				{
+					frm.m_targetInfo.isCargoBayDetected = true;
+					frm.m_targetInfo.visionPixelX = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].centerX();
 				}
-				double centerX = rectLargest.x + (rectLargest.width / 2);
-				double centerY = rectLargest.y + (rectLargest.height / 2);
-				float radius = Math.min(rectLargest.width, rectLargest.height);
+			}
+			
+			if(frm.m_targetInfo.isCargoBayDetected)
+			{
 				Scalar colorBlue = new Scalar(0, 0, 255);
 				Scalar colorRed = new Scalar(255, 0, 0);
-
-				Point pt1 = new Point(centerX - radius, centerY);
-				Point pt2 = new Point(centerX + radius, centerY);
-				Imgproc.line(frm.m_filteredFrame, pt1, pt2, colorBlue);
-				Point pt3 = new Point(centerX, centerY - radius);
-				Point pt4 = new Point(centerX, centerY + radius);
-				Imgproc.line(frm.m_filteredFrame, pt3, pt4, colorBlue);
-				Imgproc.drawContours(frm.m_filteredFrame, contours, idxLargestContour, colorRed);
-
+				
+				Point rect_points[] = new Point[4];
+				myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft.points(rect_points);
+				int j=0;
+				for( j = 0; j < 4; j++ )
+				{
+					Imgproc.line( frm.m_filteredFrame, rect_points[j], rect_points[(j+1)%4], colorBlue );					
+				}
+				
+				myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectRight.points(rect_points);
+				for( j = 0; j < 4; j++ )
+				{
+					Imgproc.line( frm.m_filteredFrame, rect_points[j], rect_points[(j+1)%4], colorBlue );					
+				}
 			}
 			Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.addTail(frm);
 		}
