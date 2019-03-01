@@ -35,7 +35,6 @@ import java.util.ArrayList;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
-import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
@@ -44,11 +43,10 @@ import org.opencv.imgproc.Imgproc;
 public class QGripThreadRunnable implements Runnable {
 	public boolean isShuttingDown = false;
 	private static GripPipeline myGripPipeline = null;
-	private static CargoBayFinder myCargoBayFinder = null;
-	
+
+	@Override
 	public void run() {
 		myGripPipeline = new GripPipeline();
-		myCargoBayFinder = new CargoBayFinder();
 
 		// All Mats and Lists should be stored outside the loop to avoid
 		// allocations
@@ -105,42 +103,40 @@ public class QGripThreadRunnable implements Runnable {
 				frm.m_filteredFrame = new Mat();
 			}
 			
-			// Raspberry Pi not enough for undistort task
+			// Rasperry Pi not enough for undistort task
 			// At 30FPS queued 13 more frames before finished processing one frame
 			//Imgproc.undistort(frm.m_frame, frm.m_filteredFrame, cameraMatrix, distCoeffs);
 			frm.m_filteredFrame = frm.m_frame;
 			
-			frm.m_targetInfo.isCargoBayDetected = false;
 			myGripPipeline.process(frm.m_frame);
 			ArrayList<MatOfPoint> contours = myGripPipeline.findContoursOutput();
-			
 			if (!contours.isEmpty()) {
-				myCargoBayFinder.initFromContours(contours);
-				if(myCargoBayFinder.m_nValidCargoBay > 0)
-				{
-					frm.m_targetInfo.isCargoBayDetected = true;
-					frm.m_targetInfo.visionPixelX = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].centerX();
+				Rect rectLargest = new Rect();
+				double largestArea = 0.0;
+				int idxLargestContour = 0;
+				for (int i = 0; i < contours.size(); i++) {
+					Rect rectContour = Imgproc.boundingRect(contours.get(i));
+					double area = rectContour.width * rectContour.height;
+					if (largestArea < area) {
+						largestArea = area;
+						rectLargest = rectContour;
+						idxLargestContour = i;
+					}
 				}
-			}
-			
-			if(frm.m_targetInfo.isCargoBayDetected)
-			{
+				double centerX = rectLargest.x + (rectLargest.width / 2);
+				double centerY = rectLargest.y + (rectLargest.height / 2);
+				float radius = Math.min(rectLargest.width, rectLargest.height);
 				Scalar colorBlue = new Scalar(0, 0, 255);
 				Scalar colorRed = new Scalar(255, 0, 0);
-				
-				Point rect_points[] = new Point[4];
-				myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft.points(rect_points);
-				int j=0;
-				for( j = 0; j < 4; j++ )
-				{
-					Imgproc.line( frm.m_filteredFrame, rect_points[j], rect_points[(j+1)%4], colorBlue );					
-				}
-				
-				myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectRight.points(rect_points);
-				for( j = 0; j < 4; j++ )
-				{
-					Imgproc.line( frm.m_filteredFrame, rect_points[j], rect_points[(j+1)%4], colorBlue );					
-				}
+
+				Point pt1 = new Point(centerX - radius, centerY);
+				Point pt2 = new Point(centerX + radius, centerY);
+				Imgproc.line(frm.m_filteredFrame, pt1, pt2, colorBlue);
+				Point pt3 = new Point(centerX, centerY - radius);
+				Point pt4 = new Point(centerX, centerY + radius);
+				Imgproc.line(frm.m_filteredFrame, pt3, pt4, colorBlue);
+				Imgproc.drawContours(frm.m_filteredFrame, contours, idxLargestContour, colorRed);
+
 			}
 			Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.addTail(frm);
 		}

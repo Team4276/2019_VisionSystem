@@ -27,10 +27,8 @@ public class GripPipeline {
 
 	//Outputs
 	private Mat blurOutput = new Mat();
-	private Mat desaturateOutput = new Mat();
-	private Mat cvThresholdOutput = new Mat();
+	private Mat hsvThresholdOutput = new Mat();
 	private ArrayList<MatOfPoint> findContoursOutput = new ArrayList<MatOfPoint>();
-	private ArrayList<MatOfPoint> convexHullsOutput = new ArrayList<MatOfPoint>();
 
 	static {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -43,28 +41,20 @@ public class GripPipeline {
 		// Step Blur0:
 		Mat blurInput = source0;
 		BlurType blurType = BlurType.get("Box Blur");
-		double blurRadius = 2.702702702702702;
+		double blurRadius = 2.7027027027027026;
 		blur(blurInput, blurType, blurRadius, blurOutput);
 
-		// Step Desaturate0:
-		Mat desaturateInput = blurOutput;
-		desaturate(desaturateInput, desaturateOutput);
-
-		// Step CV_Threshold0:
-		Mat cvThresholdSrc = desaturateOutput;
-		double cvThresholdThresh = 232.0;
-		double cvThresholdMaxval = 255.0;
-		int cvThresholdType = Imgproc.THRESH_BINARY;
-		cvThreshold(cvThresholdSrc, cvThresholdThresh, cvThresholdMaxval, cvThresholdType, cvThresholdOutput);
+		// Step HSV_Threshold0:
+		Mat hsvThresholdInput = blurOutput;
+		double[] hsvThresholdHue = {71.03669583606553, 95.72058508830013};
+		double[] hsvThresholdSaturation = {61.915467625899275, 255.0};
+		double[] hsvThresholdValue = {147.89662139346288, 255.0};
+		hsvThreshold(hsvThresholdInput, hsvThresholdHue, hsvThresholdSaturation, hsvThresholdValue, hsvThresholdOutput);
 
 		// Step Find_Contours0:
-		Mat findContoursInput = cvThresholdOutput;
+		Mat findContoursInput = hsvThresholdOutput;
 		boolean findContoursExternalOnly = false;
 		findContours(findContoursInput, findContoursExternalOnly, findContoursOutput);
-
-		// Step Convex_Hulls0:
-		ArrayList<MatOfPoint> convexHullsContours = findContoursOutput;
-		convexHulls(convexHullsContours, convexHullsOutput);
 
 	}
 
@@ -77,19 +67,11 @@ public class GripPipeline {
 	}
 
 	/**
-	 * This method is a generated getter for the output of a Desaturate.
-	 * @return Mat output from Desaturate.
+	 * This method is a generated getter for the output of a HSV_Threshold.
+	 * @return Mat output from HSV_Threshold.
 	 */
-	public Mat desaturateOutput() {
-		return desaturateOutput;
-	}
-
-	/**
-	 * This method is a generated getter for the output of a CV_Threshold.
-	 * @return Mat output from CV_Threshold.
-	 */
-	public Mat cvThresholdOutput() {
-		return cvThresholdOutput;
+	public Mat hsvThresholdOutput() {
+		return hsvThresholdOutput;
 	}
 
 	/**
@@ -98,14 +80,6 @@ public class GripPipeline {
 	 */
 	public ArrayList<MatOfPoint> findContoursOutput() {
 		return findContoursOutput;
-	}
-
-	/**
-	 * This method is a generated getter for the output of a Convex_Hulls.
-	 * @return ArrayList<MatOfPoint> output from Convex_Hulls.
-	 */
-	public ArrayList<MatOfPoint> convexHullsOutput() {
-		return convexHullsOutput;
 	}
 
 
@@ -175,38 +149,19 @@ public class GripPipeline {
 	}
 
 	/**
-	 * Converts a color image into shades of grey.
-	 * @param input The image on which to perform the desaturate.
+	 * Segment an image based on hue, saturation, and value ranges.
+	 *
+	 * @param input The image on which to perform the HSL threshold.
+	 * @param hue The min and max hue
+	 * @param sat The min and max saturation
+	 * @param val The min and max value
 	 * @param output The image in which to store the output.
 	 */
-	private void desaturate(Mat input, Mat output) {
-		switch (input.channels()) {
-			case 1:
-				// If the input is already one channel, it's already desaturated
-				input.copyTo(output);
-				break;
-			case 3:
-				Imgproc.cvtColor(input, output, Imgproc.COLOR_BGR2GRAY);
-				break;
-			case 4:
-				Imgproc.cvtColor(input, output, Imgproc.COLOR_BGRA2GRAY);
-				break;
-			default:
-				throw new IllegalArgumentException("Input to desaturate must have 1, 3, or 4 channels");
-		}
-	}
-
-	/**
-	 * Apply a fixed-level threshold to each array element in an image.
-	 * @param src Image to threshold.
-	 * @param threshold threshold value.
-	 * @param maxVal Maximum value for THRES_BINARY and THRES_BINARY_INV
-	 * @param type Type of threshold to appy.
-	 * @param dst output Image.
-	 */
-	private void cvThreshold(Mat src, double threshold, double maxVal, int type,
-		Mat dst) {
-		Imgproc.threshold(src, dst, threshold, maxVal, type);
+	private void hsvThreshold(Mat input, double[] hue, double[] sat, double[] val,
+	    Mat out) {
+		Imgproc.cvtColor(input, out, Imgproc.COLOR_BGR2HSV);
+		Core.inRange(out, new Scalar(hue[0], sat[0], val[0]),
+			new Scalar(hue[1], sat[1], val[1]), out);
 	}
 
 	/**
@@ -229,29 +184,6 @@ public class GripPipeline {
 		}
 		int method = Imgproc.CHAIN_APPROX_SIMPLE;
 		Imgproc.findContours(input, contours, hierarchy, mode, method);
-	}
-
-	/**
-	 * Compute the convex hulls of contours.
-	 * @param inputContours The contours on which to perform the operation.
-	 * @param outputContours The contours where the output will be stored.
-	 */
-	private void convexHulls(List<MatOfPoint> inputContours,
-		ArrayList<MatOfPoint> outputContours) {
-		final MatOfInt hull = new MatOfInt();
-		outputContours.clear();
-		for (int i = 0; i < inputContours.size(); i++) {
-			final MatOfPoint contour = inputContours.get(i);
-			final MatOfPoint mopHull = new MatOfPoint();
-			Imgproc.convexHull(contour, hull);
-			mopHull.create((int) hull.size().height, 1, CvType.CV_32SC2);
-			for (int j = 0; j < hull.size().height; j++) {
-				int index = (int) hull.get(j, 0)[0];
-				double[] point = new double[] {contour.get(index, 0)[0], contour.get(index, 0)[1]};
-				mopHull.put(j, 0, point);
-			}
-			outputContours.add(mopHull);
-		}
 	}
 
 
