@@ -43,10 +43,12 @@ import org.opencv.imgproc.Imgproc;
 public class QGripThreadRunnable implements Runnable {
 	public boolean isShuttingDown = false;
 	private static GripPipeline myGripPipeline = null;
+	private static CargoBayFinder myCargoBayFinder = null;
 
 	@Override
 	public void run() {
 		myGripPipeline = new GripPipeline();
+		myCargoBayFinder = new CargoBayFinder();
 
 		// All Mats and Lists should be stored outside the loop to avoid
 		// allocations
@@ -108,7 +110,7 @@ public class QGripThreadRunnable implements Runnable {
 			//Imgproc.undistort(frm.m_frame, frm.m_filteredFrame, cameraMatrix, distCoeffs);
 			frm.m_filteredFrame = frm.m_frame;
 			
-		frm.m_targetInfo.isCargoBayDetected = false;
+		    frm.m_targetInfo.isCargoBayDetected = false;
 			myGripPipeline.process(frm.m_frame);
 			ArrayList<MatOfPoint> contours = myGripPipeline.findContoursOutput();
 			
@@ -139,6 +141,11 @@ public class QGripThreadRunnable implements Runnable {
 				{
 					Imgproc.line( frm.m_filteredFrame, rect_points[j], rect_points[(j+1)%4], colorBlue );					
 				}
+			}
+			
+			if((frm.m_targetInfo.nSequence % 5) == 0) {
+				Main.m_testMonitor.saveFrameToJpeg(frm.m_filteredFrame);
+				Main.m_testMonitor.saveFrameToJpeg(frm.m_frame);
 			}
 			Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.addTail(frm);
 		}

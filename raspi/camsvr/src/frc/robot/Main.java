@@ -54,6 +54,7 @@ public class Main {
 	private static Boolean useSingleJpegInseadOfCamera = false;
 	static final int FRAME_WIDTH = 640;
 	static final int FRAME_HEIGHT = 480;
+	static final int FRAME_CENTER_PIXEL_X = FRAME_WIDTH/2;
 
 	private static final int MAX_FRAMES = 32;
 
@@ -231,10 +232,6 @@ public class Main {
 
 			frm.m_frame = inputImage;
 			
-			if((frm.m_targetInfo.nSequence % 5) == 0) {
-				m_testMonitor.saveFrameToJpeg(frm.m_frame);
-			}
-
 			myFrameQueue_WAIT_FOR_BLOB_DETECT.addTail(frm);
 		}
 	}
