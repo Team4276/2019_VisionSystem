@@ -41,16 +41,18 @@ public class CargoBay {
 		m_rectRight = new RotatedRect();
 	}
 
-	CargoBay(RotatedRect lft, RotatedRect rt) {
-		m_rectLeft = lft;
-		m_rectRight = rt;
-	}
-	
 	public void init() {
 		CargoBayFinder.initRotatedRect(m_rectLeft);
 		CargoBayFinder.initRotatedRect(m_rectRight);
 	}
 
+	public void set(RotatedRect lft, RotatedRect rt) 
+	{
+		m_rectLeft = lft;
+		m_rectRight = rt;
+	}
+
+	
 	public double centerX() 
 	{
 		return (m_rectRight.center.x - m_rectLeft.center.x) / 2;

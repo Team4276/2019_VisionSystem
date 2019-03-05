@@ -46,6 +46,7 @@ public class QTextThreadRunnable implements Runnable {
 
 	private DatagramSocket socket;
 
+	@Override
 	public void run() {
 		try {
 			socket = new DatagramSocket(JTargetInfo.textPortRoboRioReceive);
@@ -60,6 +61,7 @@ public class QTextThreadRunnable implements Runnable {
 			e1.printStackTrace();
 		}
 
+		DatagramPacket packet = null;
 		while (!isShuttingDown) {
 			JVideoFrame frm = Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.dropOlderAndRemoveHead();
 			if (frm == null) {
@@ -67,14 +69,20 @@ public class QTextThreadRunnable implements Runnable {
 			}
 
 			String sMsg = frm.m_targetInfo.numberToText();
-			DatagramPacket packet = new DatagramPacket(sMsg.getBytes(), sMsg.length(), ipAddressRoboRio, JTargetInfo.textPortRoboRioReceive);
+			if(packet == null)
+			{
+				packet = new DatagramPacket(sMsg.getBytes(), sMsg.length(), ipAddressRoboRio, JTargetInfo.textPortRoboRioReceive);
+			}
+			else
+			{
+				packet.setData(sMsg.getBytes(), 0, sMsg.length());
+			}
 			try {
 				socket.send(packet);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-
 			Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT.addTail(frm);
 		}
 	}

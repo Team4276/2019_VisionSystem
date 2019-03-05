@@ -96,8 +96,11 @@ public class CargoBayFinder {
 		for (i = 0; i < contours.size(); i++) {
 			MatOfPoint2f myMat2f = new MatOfPoint2f(contours.get(i).toArray());
 			RotatedRect rotRect = Imgproc.minAreaRect(myMat2f);
-			m_leftToRightRectangles[m_nValidRect] = rotRect;
-			m_largestRectangles[m_nValidRect++] = rotRect;
+			if(area(rotRect) > 9) 
+			{
+				m_leftToRightRectangles[m_nValidRect] = rotRect;
+				m_largestRectangles[m_nValidRect++] = rotRect;
+			}
 		}
 		sortLeftToRight(m_leftToRightRectangles, m_nValidRect);
 		sortLargestArea(m_largestRectangles, m_nValidRect);
@@ -118,33 +121,36 @@ public class CargoBayFinder {
 
 		// Now look for horizontally adjacent vision targets that ALSO tilt toward each
 		// other
-		for (i = 0; i < m_nValidRect-1; i++) {
-			int idxNext = i + 1;
-			
-			// Skip if more than a factor of 4 difference in size
-			if(area(m_leftToRightRectangles[idxNext]) == 0) {
-				continue;
+		if(m_nValidRect > 1) 
+		{
+			for (i = 0; i < m_nValidRect-1; i++) {
+				int idxNext = i + 1;
+				
+				// Skip if more than a factor of 4 difference in size
+				if(area(m_leftToRightRectangles[idxNext]) == 0) {
+					continue;
+				}
+				double ratio = Math.abs(area(m_leftToRightRectangles[i]) / area(m_leftToRightRectangles[idxNext]));
+				if(ratio < 0.25) {
+					continue;
+				}
+				if(ratio > 4.0) {
+					continue;
+				}
+				
+				// Skip if not tilted toward each other
+				if( 0 < tilt(m_leftToRightRectangles[i])) {
+					continue;
+				}
+				if( 0 > tilt(m_leftToRightRectangles[idxNext])) {
+					continue;
+				}
+				
+				m_foundCargoBays[m_nValidCargoBay++].set(m_leftToRightRectangles[i], m_leftToRightRectangles[idxNext]);
+				i += 2; 
 			}
-			double ratio = Math.abs(area(m_leftToRightRectangles[i]) / area(m_leftToRightRectangles[idxNext]));
-			if(ratio < 0.25) {
-				continue;
-			}
-			if(ratio > 4.0) {
-				continue;
-			}
-			
-			// Skip if not tilted toward each other
-			if( 0 < tilt(m_leftToRightRectangles[i])) {
-				continue;
-			}
-			if( 0 > tilt(m_leftToRightRectangles[idxNext])) {
-				continue;
-			}
-			
-			m_foundCargoBays[m_nValidCargoBay++] = new CargoBay(m_leftToRightRectangles[i], m_leftToRightRectangles[idxNext]);
-			i += 2; 
 		}
-
+		
 		int minDistance = Main.FRAME_WIDTH;
 		m_idxNearestCenterX = 0;
 		for (i = 0; i < m_nValidCargoBay; i++) {

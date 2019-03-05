@@ -35,7 +35,6 @@ import java.util.ArrayList;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
-import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
@@ -45,7 +44,8 @@ public class QGripThreadRunnable implements Runnable {
 	public boolean isShuttingDown = false;
 	private static GripPipeline myGripPipeline = null;
 	private static CargoBayFinder myCargoBayFinder = null;
-	
+
+	@Override
 	public void run() {
 		myGripPipeline = new GripPipeline();
 		myCargoBayFinder = new CargoBayFinder();
@@ -63,6 +63,9 @@ public class QGripThreadRunnable implements Runnable {
 		double dDist[] = { -2.7415242407561496e-01, 6.0732740115875483e-02, 0., 0., -5.5934428233374665e-03 };
 		Mat distCoeffs = new Mat(1, 5, CvType.CV_64FC1);
 		distCoeffs.put(row, col, dDist);
+
+		Scalar colorBlue = new Scalar(0, 0, 255);
+		Point rect_points[] = new Point[4];
 
 		while (!isShuttingDown) {
 			
@@ -105,12 +108,12 @@ public class QGripThreadRunnable implements Runnable {
 				frm.m_filteredFrame = new Mat();
 			}
 			
-			// Raspberry Pi not enough for undistort task
+			// Rasperry Pi not enough for undistort task
 			// At 30FPS queued 13 more frames before finished processing one frame
 			//Imgproc.undistort(frm.m_frame, frm.m_filteredFrame, cameraMatrix, distCoeffs);
 			frm.m_filteredFrame = frm.m_frame;
 			
-			frm.m_targetInfo.isCargoBayDetected = false;
+		    frm.m_targetInfo.isCargoBayDetected = false;
 			myGripPipeline.process(frm.m_frame);
 			ArrayList<MatOfPoint> contours = myGripPipeline.findContoursOutput();
 			
@@ -125,10 +128,6 @@ public class QGripThreadRunnable implements Runnable {
 			
 			if(frm.m_targetInfo.isCargoBayDetected)
 			{
-				Scalar colorBlue = new Scalar(0, 0, 255);
-				Scalar colorRed = new Scalar(255, 0, 0);
-				
-				Point rect_points[] = new Point[4];
 				myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft.points(rect_points);
 				int j=0;
 				for( j = 0; j < 4; j++ )
@@ -141,6 +140,11 @@ public class QGripThreadRunnable implements Runnable {
 				{
 					Imgproc.line( frm.m_filteredFrame, rect_points[j], rect_points[(j+1)%4], colorBlue );					
 				}
+			}
+			
+			if((frm.m_targetInfo.nSequence % 5) == 0) {
+				Main.m_testMonitor.saveFrameToJpeg(frm.m_filteredFrame);
+				Main.m_testMonitor.saveFrameToJpeg(frm.m_frame);
 			}
 			Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.addTail(frm);
 		}

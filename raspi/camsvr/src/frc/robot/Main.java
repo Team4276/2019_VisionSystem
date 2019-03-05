@@ -48,11 +48,13 @@ public class Main {
 	public static JVideoFrameQueue myFrameQueue_WAIT_FOR_BLOB_DETECT = null;
 	public static JVideoFrameQueue myFrameQueue_WAIT_FOR_TEXT_CLIENT = null;
 	public static JVideoFrameQueue myFrameQueue_WAIT_FOR_BROWSER_CLIENT = null;
+	
+	public static TestMonitor m_testMonitor = null;
 
-	private static boolean useSingleJpegInseadOfCamera = true;
+	private static Boolean useSingleJpegInseadOfCamera = false;
 	static final int FRAME_WIDTH = 640;
 	static final int FRAME_HEIGHT = 480;
-	static final int FRAME_CENTER_PIXEL_X = FRAME_WIDTH / 2;
+	static final int FRAME_CENTER_PIXEL_X = FRAME_WIDTH/2;
 
 	private static final int MAX_FRAMES = 32;
 
@@ -74,6 +76,8 @@ public class Main {
 				+ System.getProperty("java.library.path"));
 		System.loadLibrary("opencv");
 
+		m_testMonitor = new TestMonitor();
+		
 		myFrameQueue_FREE = new JVideoFrameQueue(JFrameQueueType.FREE);
 		myFrameQueue_WAIT_FOR_BLOB_DETECT = new JVideoFrameQueue(
 				JFrameQueueType.WAIT_FOR_BLOB_DETECT);
@@ -147,7 +151,7 @@ public class Main {
 			// that can be used
 			// Set the resolution for our camera, since this is over USB
 			camera.setResolution(640, 480);
-			camera.setFPS(60);
+			camera.setFPS(10);
 
 			// This creates a CvSink for us to use. This grabs images from our
 			// selected
@@ -158,14 +162,12 @@ public class Main {
 		}
 
 		// Infinitely process image
-		int iDropCount = 0;
-		long timeStartBatch = System.nanoTime();
 		int type = CvType.CV_8UC3;
+		Mat inputImage = new Mat(FRAME_HEIGHT, FRAME_WIDTH, type);
 		while (true) {
-			Mat inputImage = new Mat(FRAME_HEIGHT, FRAME_WIDTH, type);
 			if (useSingleJpegInseadOfCamera) {
 				inputImage = Imgcodecs
-						.imread("/home/pi/camtest/Snapshot_20190119_17.JPG");
+						.imread("/home/pi/cam170_rocket_00deg_06ft_edit.JPG");
 				// inputImage = Imgcodecs.imwrite("/home/pi/t.JPG", inputImage);
 			} else {
 				// Grab a frame. If it has a frame time of 0, there was an
@@ -226,19 +228,10 @@ public class Main {
 								Main.myFrameQueue_WAIT_FOR_BLOB_DETECT.m_droppedFrames,
 								Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.m_droppedFrames,
 								Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT.m_droppedFrames);
-				int iTotalDropped = Main.myFrameQueue_FREE.m_droppedFrames 
-						+ Main.myFrameQueue_WAIT_FOR_BLOB_DETECT.m_droppedFrames
-						+ Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.m_droppedFrames
-						+ Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT.m_droppedFrames;
-				long timeDelta = System.nanoTime() - timeStartBatch;
-				timeDelta /= 1000000;  // convert to millisecs
-				System.out.printf("timeThisBatch = %d ms.   timePerFrame = %d ms.   Dropped %d / 50\n", timeDelta, timeDelta/50, (iTotalDropped - iDropCount));
-				iDropCount = iTotalDropped;
-				timeStartBatch = System.nanoTime();
 			}
 
 			frm.m_frame = inputImage;
-
+			
 			myFrameQueue_WAIT_FOR_BLOB_DETECT.addTail(frm);
 		}
 	}
