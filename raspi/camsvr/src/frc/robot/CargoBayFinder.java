@@ -88,6 +88,36 @@ public class CargoBayFinder {
 		m_nValidCargoBay = 0;
 		m_idxNearestCenterX = 0;
 	}
+	
+	private void insertKeepingLargest(RotatedRect rotRect)
+	{
+		if(area(rotRect) <= 9) 
+		{
+			return;
+		}
+		if(m_nValidRect < MAX_VISION_TARGETS)
+		{
+			m_largestRectangles[m_nValidRect++] = rotRect;
+			return;
+		}
+		
+		double smallestArea = 640*480;;
+		int idxSmallest = -1;
+		for (int i = 0; i < m_nValidRect; i++)
+		{
+			if(smallestArea > area(m_largestRectangles[i])) 
+			{
+				smallestArea = area(m_largestRectangles[i]);
+				idxSmallest = i;
+			}
+		}
+		double myArea = area(rotRect);
+		if(smallestArea < myArea) 
+		{
+			m_largestRectangles[idxSmallest] = rotRect;
+		}
+		
+	}
 
 	public void initFromContours(ArrayList<MatOfPoint> contours) {
 		init();
@@ -96,14 +126,14 @@ public class CargoBayFinder {
 		for (i = 0; i < contours.size(); i++) {
 			MatOfPoint2f myMat2f = new MatOfPoint2f(contours.get(i).toArray());
 			RotatedRect rotRect = Imgproc.minAreaRect(myMat2f);
-			if(area(rotRect) > 9) 
-			{
-				m_leftToRightRectangles[m_nValidRect] = rotRect;
-				m_largestRectangles[m_nValidRect++] = rotRect;
-			}
+			insertKeepingLargest(rotRect);
+		}
+		sortLargestArea(m_largestRectangles, m_nValidRect);
+		for(i=0; i<m_nValidRect; i++)
+		{
+			m_leftToRightRectangles[i] = m_largestRectangles[i];
 		}
 		sortLeftToRight(m_leftToRightRectangles, m_nValidRect);
-		sortLargestArea(m_largestRectangles, m_nValidRect);
 
 		/*
 		for (i = 0; i < m_nValidRect; i++) {
