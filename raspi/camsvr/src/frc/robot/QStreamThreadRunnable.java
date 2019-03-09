@@ -35,7 +35,6 @@ import edu.wpi.cscore.MjpegServer;
 import edu.wpi.cscore.VideoMode;
 
 public class QStreamThreadRunnable implements Runnable {
-	public boolean isShuttingDown = false;
 
 	@Override
 	public void run() {
@@ -49,7 +48,7 @@ public class QStreamThreadRunnable implements Runnable {
 		MjpegServer cvStream = new MjpegServer("CV Image Stream", JTargetInfo.streamAnnotatedSourcePortOnRaspberryPi);
 		cvStream.setSource(imageSource);
 
-		while (!isShuttingDown) {
+		while (!Main.isShuttingDown) {
 			JVideoFrame frm = Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT.dropOlderAndRemoveHead();
 			if (frm == null) {
 				continue;

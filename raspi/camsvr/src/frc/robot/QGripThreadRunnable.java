@@ -32,11 +32,13 @@ package frc.robot;
 
 import java.util.ArrayList;
 
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
@@ -45,6 +47,30 @@ public class QGripThreadRunnable implements Runnable {
 	private static GripPipeline myGripPipeline = null;
 	private static CargoBayFinder myCargoBayFinder = null;
 
+	private static void drawRect(Mat img, RotatedRect rotRect, Scalar clrRect, Scalar clrText)
+	{
+		Point rect_points[] = new Point[4];
+		rotRect.points(rect_points);
+		int j = 0;
+		for (j = 0; j < 4; j++) {
+			Imgproc.line(img, rect_points[j], rect_points[(j + 1) % 4], clrRect, 2);
+		}
+		double tiltAngle = CargoBayFinder.tilt(rotRect);
+		Integer iTemp = new Integer((int)tiltAngle);		
+		Imgproc.putText(img, iTemp.toString(), rotRect.center, Core.FONT_HERSHEY_PLAIN, 1.0, clrText);
+	}
+	
+	private static void drawPlus(Mat img, double X, double Y, Scalar clr)
+	{
+		Point pointLeft = new Point((int) X - 10, (int) Y);
+		Point pointRight = new Point((int) X + 10, (int) Y);
+		Imgproc.line(img, pointLeft, pointRight, clr, 3);
+		Point pointUp = new Point((int) X, (int) Y + 10);
+		Point pointDown = new Point((int) X, (int) Y - 10);
+		Imgproc.line(img, pointUp, pointDown, clr, 3);
+	}
+
+	
 	@Override
 	public void run() {
 		myGripPipeline = new GripPipeline();
@@ -64,85 +90,98 @@ public class QGripThreadRunnable implements Runnable {
 		Mat distCoeffs = new Mat(1, 5, CvType.CV_64FC1);
 		distCoeffs.put(row, col, dDist);
 
-		Scalar colorBlue = new Scalar(0, 0, 255);
-		Point rect_points[] = new Point[4];
+		Scalar colorRed = new Scalar(0, 0, 255);
+		Scalar colorBlue = new Scalar(255, 0, 0);
+		Scalar colorYellow = new Scalar(0, 255, 255);
+		Scalar colorOrange = new Scalar(0, 192, 192);
+		Scalar colorCyan = new Scalar(255, 255, 0);
+		Scalar colorWhite = new Scalar(255, 255, 255);
 
-		while (!isShuttingDown) {
-			
+		while (!Main.isShuttingDown) {
+
 			// Why a one millisecond nap is needed in this thread
 			//
-			// The Linux scheduler runs very often, but will let CPU hungry threads like this one run for a long time without interruption.
+			// The Linux scheduler runs very often, but will let CPU hungry threads like
+			// this one run for a long time without interruption.
 			// (Because it is CPU expensive to change thread context)
 			//
-			// Processing of the camera is the main thread of this application, doing nothing but collecting from the camera.
-			// Useful processing of the frame data is done on three other threads, each waiting on a different resource
+			// Processing of the camera is the main thread of this application, doing
+			// nothing but collecting from the camera.
+			// Useful processing of the frame data is done on three other threads, each
+			// waiting on a different resource
 			// * Camera thread wants USB (camera) resource and a little user level CPU
 			// * GRIP/OpenCV processings wants lots of CPU resource
-			// * Text message and stream threads want network resource and a tiny amount of user level CPU
+			// * Text message and stream threads want network resource and a tiny amount of
+			// user level CPU
 			//
-			// Camera, text, or stream threads very minor need for user level CPU might delay them for 10s or 100s of milliseconds waiting
-			// for the GRIP thread to take a break.  With this 1 ms. sleep the scheduler will check to see if any other threads 
+			// Camera, text, or stream threads very minor need for user level CPU might
+			// delay them for 10s or 100s of milliseconds waiting
+			// for the GRIP thread to take a break. With this 1 ms. sleep the scheduler will
+			// check to see if any other threads
 			// are ready to run at least once per frame
 			//
-			// This makes a difference in what the developer sees for an input overrun.  For example without this change if too much processing 
-			// is attempted in the GRIP thread, the camera thread is starved for CPU and misses frames and does not count them
-			// as dropped. None of the other threads drop packets so looks like all is well except frame rate is very low.
-			// With this change the camera thread can collect incoming packets that might count as dropped if the GRIP thread can't keep up.
-			// 
+			// This makes a difference in what the developer sees for an input overrun. For
+			// example without this change if too much processing
+			// is attempted in the GRIP thread, the camera thread is starved for CPU and
+			// misses frames and does not count them
+			// as dropped. None of the other threads drop packets so looks like all is well
+			// except frame rate is very low.
+			// With this change the camera thread can collect incoming packets that might
+			// count as dropped if the GRIP thread can't keep up.
+			//
 			try {
 				Thread.sleep(1);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			
+
 			JVideoFrame frm = Main.myFrameQueue_WAIT_FOR_BLOB_DETECT.dropOlderAndRemoveHead();
 			if (frm == null) {
 				continue;
 			}
-			if (frm.m_frame == null)
-			{
+			if (frm.m_frame == null) {
 				frm.m_filteredFrame = new Mat();
 			}
-			if(frm.m_filteredFrame == null)
-			{
+			if (frm.m_filteredFrame == null) {
 				frm.m_filteredFrame = new Mat();
 			}
-			
+
 			// Rasperry Pi not enough for undistort task
 			// At 30FPS queued 13 more frames before finished processing one frame
-			//Imgproc.undistort(frm.m_frame, frm.m_filteredFrame, cameraMatrix, distCoeffs);
+			// Imgproc.undistort(frm.m_frame, frm.m_filteredFrame, cameraMatrix,
+			// distCoeffs);
 			frm.m_filteredFrame = frm.m_frame;
-			
-		    frm.m_targetInfo.isCargoBayDetected = false;
+
+			frm.m_targetInfo.isCargoBayDetected = false;
 			myGripPipeline.process(frm.m_frame);
 			ArrayList<MatOfPoint> contours = myGripPipeline.findContoursOutput();
-			
+
 			if (!contours.isEmpty()) {
 				myCargoBayFinder.initFromContours(contours);
-				if(myCargoBayFinder.m_nValidCargoBay > 0)
-				{
+				if (myCargoBayFinder.m_nValidCargoBay > 0) {
 					frm.m_targetInfo.isCargoBayDetected = true;
-					frm.m_targetInfo.visionPixelX = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].centerX();
+					frm.m_targetInfo.visionPixelX = myCargoBayFinder.m_foundCargoBays[0].centerX();
 				}
 			}
-			
-			if(frm.m_targetInfo.isCargoBayDetected)
+
+			if (frm.m_targetInfo.isCargoBayDetected) {
+				drawRect(frm.m_filteredFrame, myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft, colorCyan, colorWhite);
+				drawRect(frm.m_filteredFrame, myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectRight, colorCyan, colorWhite);
+
+				double X = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].centerX();
+				double Y = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft.center.y;
+				drawPlus(frm.m_filteredFrame, X, Y, colorYellow);
+			} 
+			else
 			{
-				myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft.points(rect_points);
-				int j=0;
-				for( j = 0; j < 4; j++ )
+				myCargoBayFinder.displayText();
+				for(int i=0; i<myCargoBayFinder.m_nValidRect; i++)
 				{
-					Imgproc.line( frm.m_filteredFrame, rect_points[j], rect_points[(j+1)%4], colorBlue );					
-				}
-				
-				myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectRight.points(rect_points);
-				for( j = 0; j < 4; j++ )
-				{
-					Imgproc.line( frm.m_filteredFrame, rect_points[j], rect_points[(j+1)%4], colorBlue );					
+					drawRect(frm.m_filteredFrame, myCargoBayFinder.m_leftToRightRectangles[i], colorRed, colorWhite);
 				}
 			}
-			
-			if((frm.m_targetInfo.nSequence % 5) == 0) {
+
+			if ((frm.m_targetInfo.nSequence % 5) == 0) {
 				Main.m_testMonitor.saveFrameToJpeg(frm.m_filteredFrame);
 				Main.m_testMonitor.saveFrameToJpeg(frm.m_frame);
 			}

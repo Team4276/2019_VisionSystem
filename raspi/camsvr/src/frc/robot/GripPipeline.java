@@ -29,6 +29,7 @@ public class GripPipeline {
 	private Mat blurOutput = new Mat();
 	private Mat hsvThresholdOutput = new Mat();
 	private ArrayList<MatOfPoint> findContoursOutput = new ArrayList<MatOfPoint>();
+	private ArrayList<MatOfPoint> convexHullsOutput = new ArrayList<MatOfPoint>();
 
 	static {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -46,15 +47,19 @@ public class GripPipeline {
 
 		// Step HSV_Threshold0:
 		Mat hsvThresholdInput = blurOutput;
-		double[] hsvThresholdHue = {71.03669583606553, 95.72058508830013};
-		double[] hsvThresholdSaturation = {61.915467625899275, 255.0};
-		double[] hsvThresholdValue = {147.89662139346288, 255.0};
+		double[] hsvThresholdHue = {55.03597122302158, 87.84982935153585};
+		double[] hsvThresholdSaturation = {126.12410071942446, 255.0};
+		double[] hsvThresholdValue = {82.55395683453237, 255.0};
 		hsvThreshold(hsvThresholdInput, hsvThresholdHue, hsvThresholdSaturation, hsvThresholdValue, hsvThresholdOutput);
 
 		// Step Find_Contours0:
 		Mat findContoursInput = hsvThresholdOutput;
 		boolean findContoursExternalOnly = false;
 		findContours(findContoursInput, findContoursExternalOnly, findContoursOutput);
+
+		// Step Convex_Hulls0:
+		ArrayList<MatOfPoint> convexHullsContours = findContoursOutput;
+		convexHulls(convexHullsContours, convexHullsOutput);
 
 	}
 
@@ -80,6 +85,14 @@ public class GripPipeline {
 	 */
 	public ArrayList<MatOfPoint> findContoursOutput() {
 		return findContoursOutput;
+	}
+
+	/**
+	 * This method is a generated getter for the output of a Convex_Hulls.
+	 * @return ArrayList<MatOfPoint> output from Convex_Hulls.
+	 */
+	public ArrayList<MatOfPoint> convexHullsOutput() {
+		return convexHullsOutput;
 	}
 
 
@@ -184,6 +197,29 @@ public class GripPipeline {
 		}
 		int method = Imgproc.CHAIN_APPROX_SIMPLE;
 		Imgproc.findContours(input, contours, hierarchy, mode, method);
+	}
+
+	/**
+	 * Compute the convex hulls of contours.
+	 * @param inputContours The contours on which to perform the operation.
+	 * @param outputContours The contours where the output will be stored.
+	 */
+	private void convexHulls(List<MatOfPoint> inputContours,
+		ArrayList<MatOfPoint> outputContours) {
+		final MatOfInt hull = new MatOfInt();
+		outputContours.clear();
+		for (int i = 0; i < inputContours.size(); i++) {
+			final MatOfPoint contour = inputContours.get(i);
+			final MatOfPoint mopHull = new MatOfPoint();
+			Imgproc.convexHull(contour, hull);
+			mopHull.create((int) hull.size().height, 1, CvType.CV_32SC2);
+			for (int j = 0; j < hull.size().height; j++) {
+				int index = (int) hull.get(j, 0)[0];
+				double[] point = new double[] {contour.get(index, 0)[0], contour.get(index, 0)[1]};
+				mopHull.put(j, 0, point);
+			}
+			outputContours.add(mopHull);
+		}
 	}
 
 

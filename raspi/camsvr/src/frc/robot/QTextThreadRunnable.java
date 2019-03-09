@@ -31,16 +31,13 @@
 package frc.robot;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 
 public class QTextThreadRunnable implements Runnable {
-	public boolean isShuttingDown = false;
 	
 	static InetAddress ipAddressRoboRio = null;
 
@@ -62,7 +59,7 @@ public class QTextThreadRunnable implements Runnable {
 		}
 
 		DatagramPacket packet = null;
-		while (!isShuttingDown) {
+		while (!Main.isShuttingDown) {
 			JVideoFrame frm = Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.dropOlderAndRemoveHead();
 			if (frm == null) {
 				continue;

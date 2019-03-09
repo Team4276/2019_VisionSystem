@@ -55,7 +55,6 @@ public class CargoBay {
 	
 	public double centerX() 
 	{
-		return (m_rectRight.center.x - m_rectLeft.center.x) / 2;
+		return m_rectLeft.center.x + ((m_rectRight.center.x - m_rectLeft.center.x) / 2);
 	}
-
 }

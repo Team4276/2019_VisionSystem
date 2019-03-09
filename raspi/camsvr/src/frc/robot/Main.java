@@ -48,16 +48,17 @@ public class Main {
 	public static JVideoFrameQueue myFrameQueue_WAIT_FOR_BLOB_DETECT = null;
 	public static JVideoFrameQueue myFrameQueue_WAIT_FOR_TEXT_CLIENT = null;
 	public static JVideoFrameQueue myFrameQueue_WAIT_FOR_BROWSER_CLIENT = null;
-	
+
 	public static TestMonitor m_testMonitor = null;
 
 	private static Boolean useSingleJpegInseadOfCamera = false;
 	static final int FRAME_WIDTH = 640;
 	static final int FRAME_HEIGHT = 480;
-	static final int FRAME_CENTER_PIXEL_X = FRAME_WIDTH/2;
+	static final int FRAME_CENTER_PIXEL_X = FRAME_WIDTH / 2;
 
 	private static final int MAX_FRAMES = 32;
 
+	public static boolean isShuttingDown = false;
 	private static Thread m_gripThread = null;
 	private static Thread m_textThread = null;
 	private static Thread m_streamThread = null;
@@ -98,6 +99,29 @@ public class Main {
 
 		m_streamThread = new Thread(new QStreamThreadRunnable());
 		m_streamThread.start();
+		
+        Runtime.getRuntime().addShutdownHook(new Thread()
+        {
+            @Override
+            public void run()
+            {
+                try {
+                	isShuttingDown = true;
+                	
+                	m_streamThread.interrupt();
+                	m_textThread.interrupt();
+                	m_gripThread.interrupt();
+                 	
+                	m_streamThread.join();
+                	m_textThread.join();
+                	m_gripThread.join();
+                }
+                catch (InterruptedException e) {
+                }
+            }
+        });
+
+
 
 		// Connect NetworkTables, and get access to the publishing table
 		NetworkTable.setClientMode();
@@ -151,7 +175,8 @@ public class Main {
 			// that can be used
 			// Set the resolution for our camera, since this is over USB
 			camera.setResolution(640, 480);
-			camera.setFPS(10);
+			camera.setFPS(5);
+			camera.setExposureManual(25);
 
 			// This creates a CvSink for us to use. This grabs images from our
 			// selected
@@ -164,7 +189,7 @@ public class Main {
 		// Infinitely process image
 		int type = CvType.CV_8UC3;
 		Mat inputImage = new Mat(FRAME_HEIGHT, FRAME_WIDTH, type);
-		while (true) {
+		while (!isShuttingDown) {
 			if (useSingleJpegInseadOfCamera) {
 				inputImage = Imgcodecs
 						.imread("/home/pi/cam170_rocket_00deg_06ft_edit.JPG");
@@ -239,21 +264,20 @@ public class Main {
 	/*
 	 * private static HttpCamera setHttpCamera(String cameraName, MjpegServer
 	 * server) { // Start by grabbing the camera from NetworkTables NetworkTable
-	 * publishingTable = NetworkTable.getTable("CameraPublisher"); // Wait for
-	 * robot to connect. Allow this to be attempted indefinitely while (true) {
-	 * try { if (publishingTable.getSubTables().size() > 0) { break; }
-	 * Thread.sleep(500); } catch (Exception e) { // TODO Auto-generated catch
-	 * block e.printStackTrace(); } }
+	 * publishingTable = NetworkTable.getTable("CameraPublisher"); // Wait for robot
+	 * to connect. Allow this to be attempted indefinitely while (true) { try { if
+	 * (publishingTable.getSubTables().size() > 0) { break; } Thread.sleep(500); }
+	 * catch (Exception e) { // TODO Auto-generated catch block e.printStackTrace();
+	 * } }
 	 * 
-	 * HttpCamera camera = null; if
-	 * (!publishingTable.containsSubTable(cameraName)) { return null; } ITable
-	 * cameraTable = publishingTable.getSubTable(cameraName); String[] urls =
-	 * cameraTable.getStringArray("streams", null); if (urls == null) { return
-	 * null; } ArrayList<String> fixedUrls = new ArrayList<String>(); for
-	 * (String url : urls) { if (url.startsWith("mjpg")) {
-	 * fixedUrls.add(url.split(":", 2)[1]); } } camera = new
-	 * HttpCamera("CoprocessorCamera", fixedUrls.toArray(new String[0]));
-	 * server.setSource(camera); return camera; }
+	 * HttpCamera camera = null; if (!publishingTable.containsSubTable(cameraName))
+	 * { return null; } ITable cameraTable =
+	 * publishingTable.getSubTable(cameraName); String[] urls =
+	 * cameraTable.getStringArray("streams", null); if (urls == null) { return null;
+	 * } ArrayList<String> fixedUrls = new ArrayList<String>(); for (String url :
+	 * urls) { if (url.startsWith("mjpg")) { fixedUrls.add(url.split(":", 2)[1]); }
+	 * } camera = new HttpCamera("CoprocessorCamera", fixedUrls.toArray(new
+	 * String[0])); server.setSource(camera); return camera; }
 	 */
 
 	private static UsbCamera setUsbCamera(int cameraId, MjpegServer server) {

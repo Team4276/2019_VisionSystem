@@ -95,7 +95,7 @@ public class JVideoFrameQueue
 	
 	JVideoFrame dropOlderAndRemoveHead()
 	{
-		while(m_queue.size() > 0) 
+		while( (!Main.isShuttingDown) && (m_queue.size() > 0) )
 		{
 			if(m_queue.size() == 1)
 			{

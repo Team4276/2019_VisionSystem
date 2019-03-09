@@ -1,0 +1,7 @@
+#!/bin/bash
+cd /home/pi/2019_VisionSystem/raspi/camsvr/release
+rm -rf /home/pi/2019_VisionSystem/raspi/camsvr/bin
+cp  /home/pi/2019_VisionSystem/raspi/camsvr/bin /home/pi/2019_VisionSystem/raspi/camsvr/release
+
+rm -rf /home/pi/2019_VisionSystem/raspi/camsvr/bin
+
