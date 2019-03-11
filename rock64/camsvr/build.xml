@@ -13,7 +13,7 @@
         <pathelement location="bin"/>
         <pathelement location="lib/cscore.jar"/>
         <pathelement location="lib/NetworkTables.jar"/>
-        <pathelement location="lib/opencv-343.jar"/>
+        <pathelement location="lib/opencv-345.jar"/>
     </path>
     <target name="init">
         <mkdir dir="bin"/>
@@ -52,7 +52,7 @@
         <antcall target="build"/>
     </target>
     <target name="Main">
-        <java classname="org.usfirst.frc.team4276.vision.Main" failonerror="true" fork="yes">
+        <java classname="frc.robot.Main" failonerror="true" fork="yes">
             <env key="LD_LIBRARY_PATH" value="/home/rock64/2019_VisionSystem/rock64/camsvr/lib/native_armhf"/>
             <classpath refid="camsvr.classpath"/>
         </java>

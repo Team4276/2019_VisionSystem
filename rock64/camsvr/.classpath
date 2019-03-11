@@ -1,30 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" path="src">
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="lib/cscore.jar">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="camsvr/lib/native_armhf"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/NetworkTables.jar">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="camsvr/lib/native_armhf"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/opencv-345.jar">
 		<attributes>
 			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="camsvr/lib/native_armhf"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="R:/home/rock64/2019_VisionSystem/rock64/camsvr/lib/cameraserver.jar">
-		<attributes>
-			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="camsvr/lib/native_armhf"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="R:/home/rock64/2019_VisionSystem/rock64/camsvr/lib/cscore.jar">
-		<attributes>
-			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="camsvr/lib/native_armhf"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="R:/home/rock64/2019_VisionSystem/rock64/camsvr/lib/ntcore.jar">
-		<attributes>
-			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="camsvr/lib/native_armhf"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="R:/home/rock64/2019_VisionSystem/rock64/camsvr/lib/opencv-343.jar">
-		<attributes>
-			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="camsvr/lib/native_armhf"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
