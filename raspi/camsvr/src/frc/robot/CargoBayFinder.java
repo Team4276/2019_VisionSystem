@@ -44,7 +44,7 @@ import org.opencv.imgproc.Imgproc;
 public class CargoBayFinder {
 	public static final int MAX_CARGO_BAY = 12; // Up to 3 cargo side bays, 2 front bays, and a rocket bay behind
 	public static final int MAX_VISION_TARGETS = 2 * MAX_CARGO_BAY; // 2 each
-
+	
 	RotatedRect m_largestRectangles[] = null;
 	RotatedRect m_leftToRightRectangles[] = null;
 	CargoBay m_foundCargoBays[] = null;
@@ -91,6 +91,12 @@ public class CargoBayFinder {
 	}
 
 	private void insertKeepingLargest(RotatedRect rotRect) {
+		
+		if(rotRect.center.y < Main.IGNORE_ABOVE_THIS_Y_PIXEL)
+		{
+			// Zero Y pixel is at the top of the frame, e.g. (0,0) is upper left corner
+			return;
+		}
 		if (area(rotRect) <= 9) {
 			return;
 		}

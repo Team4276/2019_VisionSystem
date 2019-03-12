@@ -69,6 +69,13 @@ public class QGripThreadRunnable implements Runnable {
 		Point pointDown = new Point((int) X, (int) Y - 10);
 		Imgproc.line(img, pointUp, pointDown, clr, 3);
 	}
+	
+	private static void drawMinus(Mat img, double X, double Y, double len, Scalar clr)
+	{
+		Point pointLeft = new Point((int) X, Y);
+		Point pointRight = new Point((int) X + len, (int) Y);
+		Imgproc.line(img, pointLeft, pointRight, clr, 3);
+	}
 
 	
 	@Override
@@ -96,6 +103,7 @@ public class QGripThreadRunnable implements Runnable {
 		Scalar colorOrange = new Scalar(0, 192, 192);
 		Scalar colorCyan = new Scalar(255, 255, 0);
 		Scalar colorWhite = new Scalar(255, 255, 255);
+		Scalar colorGreen = new Scalar(0, 255, 0);
 
 		while (!Main.isShuttingDown) {
 
@@ -163,13 +171,17 @@ public class QGripThreadRunnable implements Runnable {
 					frm.m_targetInfo.visionPixelX = myCargoBayFinder.m_foundCargoBays[0].centerX();
 				}
 			}
+			
+			double X = Main.FRAME_WIDTH - 20;
+			double Y = Main.IGNORE_ABOVE_THIS_Y_PIXEL;
+			drawMinus(frm.m_filteredFrame, X, Y, 20, colorGreen);
 
 			if (frm.m_targetInfo.isCargoBayDetected) {
 				drawRect(frm.m_filteredFrame, myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft, colorCyan, colorWhite);
 				drawRect(frm.m_filteredFrame, myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectRight, colorCyan, colorWhite);
 
-				double X = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].centerX();
-				double Y = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft.center.y;
+				X = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].centerX();
+				Y = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft.center.y;
 				drawPlus(frm.m_filteredFrame, X, Y, colorYellow);
 			} 
 			else

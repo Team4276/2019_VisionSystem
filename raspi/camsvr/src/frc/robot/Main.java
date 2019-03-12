@@ -55,6 +55,7 @@ public class Main {
 	static final int FRAME_WIDTH = 640;
 	static final int FRAME_HEIGHT = 480;
 	static final int FRAME_CENTER_PIXEL_X = FRAME_WIDTH / 2;
+	static final int IGNORE_ABOVE_THIS_Y_PIXEL = (int)(0.15*FRAME_HEIGHT);
 
 	private static final int MAX_FRAMES = 32;
 
