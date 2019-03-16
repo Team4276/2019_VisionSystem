@@ -46,8 +46,8 @@ public class JTargetInfo {
 	public double visionPixelX;
 	
 	public int nSequence;
-	public int timeSinceLastCameraFrameMilliseconds;
-	public int timeLatencyThisCameraFrameMilliseconds;
+	public long timeSinceLastCameraFrameMilliseconds;
+	public long timeLatencyThisCameraFrameMilliseconds;
 
 	int commaPos;
 	String word;
@@ -99,8 +99,8 @@ public class JTargetInfo {
 		}
 		s += Double.toString(visionPixelX) + ",";
 		s += Integer.toString(nSequence) + ",";
-		s += Integer.toString(timeSinceLastCameraFrameMilliseconds) + ",";
-		s += Integer.toString(timeLatencyThisCameraFrameMilliseconds) + ",";
+		s += Long.toString(timeSinceLastCameraFrameMilliseconds) + ",";
+		s += Long.toString(timeLatencyThisCameraFrameMilliseconds) + ",";
 		return s;
 	}
 

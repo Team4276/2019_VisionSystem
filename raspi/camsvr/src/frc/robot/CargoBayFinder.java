@@ -130,8 +130,7 @@ public class CargoBayFinder {
 			insertKeepingLargest(rotRect);
 		}
 		if (m_nValidRect < 2) {
-			System.out.printf("Need at least 2 rectangles, m_nValidRect = %d, nContours = %d\n", m_nValidRect,
-					contours.size());
+			//System.out.printf("Need at least 2 rectangles, m_nValidRect = %d, nContours = %d\n", m_nValidRect, contours.size());
 			return;
 		}
 		sortLargestArea(m_largestRectangles, m_nValidRect);

@@ -64,7 +64,6 @@ public class QTextThreadRunnable implements Runnable {
 			if (frm == null) {
 				continue;
 			}
-
 			String sMsg = frm.m_targetInfo.numberToText();
 			if(packet == null)
 			{
@@ -83,5 +82,4 @@ public class QTextThreadRunnable implements Runnable {
 			Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT.addTail(frm);
 		}
 	}
-
 }

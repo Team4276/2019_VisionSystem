@@ -63,6 +63,7 @@ public class Main {
 	private static Thread m_gripThread = null;
 	private static Thread m_textThread = null;
 	private static Thread m_streamThread = null;
+	private static long timeLastFrame = 0;
 
 	private static int nSequence = 0;
 
@@ -176,7 +177,7 @@ public class Main {
 			// that can be used
 			// Set the resolution for our camera, since this is over USB
 			camera.setResolution(640, 480);
-			camera.setFPS(5);
+			camera.setFPS(30);
 			camera.setExposureManual(25);
 
 			// This creates a CvSink for us to use. This grabs images from our
@@ -241,23 +242,15 @@ public class Main {
 			frm.m_targetInfo.nSequence = Main.nSequence++;
 
 			if (0 == (frm.m_targetInfo.nSequence % 50)) {
-				System.out
-						.printf("\n\nFrame Queues --> FREE: %d   BLOB: %d  TEXT: %d  BROWSER: %d\n",
-								Main.myFrameQueue_FREE.size(),
-								Main.myFrameQueue_WAIT_FOR_BLOB_DETECT.size(),
-								Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.size(),
-								Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT
-										.size());
-				System.out
-						.printf("     Dropped --> FREE: %d   BLOB: %d  TEXT: %d  BROWSER: %d\n",
-								Main.myFrameQueue_FREE.m_droppedFrames,
-								Main.myFrameQueue_WAIT_FOR_BLOB_DETECT.m_droppedFrames,
-								Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.m_droppedFrames,
-								Main.myFrameQueue_WAIT_FOR_BROWSER_CLIENT.m_droppedFrames);
+				m_testMonitor.displayQueueLengths();
 			}
 
 			frm.m_frame = inputImage;
-			
+			if(timeLastFrame != 0)
+			{
+				frm.m_targetInfo.timeSinceLastCameraFrameMilliseconds = (System.nanoTime() - timeLastFrame)/1000000;
+			}
+			timeLastFrame = System.nanoTime();
 			myFrameQueue_WAIT_FOR_BLOB_DETECT.addTail(frm);
 		}
 	}

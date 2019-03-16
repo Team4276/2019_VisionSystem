@@ -104,6 +104,7 @@ public class QGripThreadRunnable implements Runnable {
 		Scalar colorCyan = new Scalar(255, 255, 0);
 		Scalar colorWhite = new Scalar(255, 255, 255);
 		Scalar colorGreen = new Scalar(0, 255, 0);
+		int iCount = 0;
 
 		while (!Main.isShuttingDown) {
 
@@ -186,17 +187,26 @@ public class QGripThreadRunnable implements Runnable {
 			} 
 			else
 			{
-				myCargoBayFinder.displayText();
-				for(int i=0; i<myCargoBayFinder.m_nValidRect; i++)
+				if(0 == (iCount++ % 50))
 				{
-					drawRect(frm.m_filteredFrame, myCargoBayFinder.m_leftToRightRectangles[i], colorRed, colorWhite);
+					System.out.printf("\n");
 				}
+				System.out.printf(".");
+				//myCargoBayFinder.displayText();
+				//for(int i=0; i<myCargoBayFinder.m_nValidRect; i++)
+				//{
+				//	drawRect(frm.m_filteredFrame, myCargoBayFinder.m_leftToRightRectangles[i], colorRed, colorWhite);
+				//}
 			}
 
 			if ((frm.m_targetInfo.nSequence % 5) == 0) {
 				Main.m_testMonitor.saveFrameToJpeg(frm.m_filteredFrame);
 				Main.m_testMonitor.saveFrameToJpeg(frm.m_frame);
 			}
+			
+			frm.m_targetInfo.timeLatencyThisCameraFrameMilliseconds = System.nanoTime() - frm.m_timeAddedToQueue[JFrameQueueType.WAIT_FOR_BLOB_DETECT.toInt()];			
+			Main.m_testMonitor.addStat(frm);
+
 			Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.addTail(frm);
 		}
 	}
