@@ -26,10 +26,8 @@ import org.opencv.objdetect.*;
 public class GripPipeline {
 
 	//Outputs
-	private Mat blurOutput = new Mat();
 	private Mat hsvThresholdOutput = new Mat();
 	private ArrayList<MatOfPoint> findContoursOutput = new ArrayList<MatOfPoint>();
-	private ArrayList<MatOfPoint> convexHullsOutput = new ArrayList<MatOfPoint>();
 
 	static {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -39,17 +37,11 @@ public class GripPipeline {
 	 * This is the primary method that runs the entire pipeline and updates the outputs.
 	 */
 	public void process(Mat source0) {
-		// Step Blur0:
-		Mat blurInput = source0;
-		BlurType blurType = BlurType.get("Box Blur");
-		double blurRadius = 2.7027027027027026;
-		blur(blurInput, blurType, blurRadius, blurOutput);
-
 		// Step HSV_Threshold0:
-		Mat hsvThresholdInput = blurOutput;
-		double[] hsvThresholdHue = {55.03597122302158, 87.84982935153585};
-		double[] hsvThresholdSaturation = {126.12410071942446, 255.0};
-		double[] hsvThresholdValue = {82.55395683453237, 255.0};
+		Mat hsvThresholdInput = source0;
+		double[] hsvThresholdHue = {53.58435831979521, 88.49824539195579};
+		double[] hsvThresholdSaturation = {36.690647482014384, 147.67676767676767};
+		double[] hsvThresholdValue = {168.53511060209593, 255.0};
 		hsvThreshold(hsvThresholdInput, hsvThresholdHue, hsvThresholdSaturation, hsvThresholdValue, hsvThresholdOutput);
 
 		// Step Find_Contours0:
@@ -57,18 +49,6 @@ public class GripPipeline {
 		boolean findContoursExternalOnly = false;
 		findContours(findContoursInput, findContoursExternalOnly, findContoursOutput);
 
-		// Step Convex_Hulls0:
-		ArrayList<MatOfPoint> convexHullsContours = findContoursOutput;
-		convexHulls(convexHullsContours, convexHullsOutput);
-
-	}
-
-	/**
-	 * This method is a generated getter for the output of a Blur.
-	 * @return Mat output from Blur.
-	 */
-	public Mat blurOutput() {
-		return blurOutput;
 	}
 
 	/**
@@ -87,79 +67,6 @@ public class GripPipeline {
 		return findContoursOutput;
 	}
 
-	/**
-	 * This method is a generated getter for the output of a Convex_Hulls.
-	 * @return ArrayList<MatOfPoint> output from Convex_Hulls.
-	 */
-	public ArrayList<MatOfPoint> convexHullsOutput() {
-		return convexHullsOutput;
-	}
-
-
-	/**
-	 * An indication of which type of filter to use for a blur.
-	 * Choices are BOX, GAUSSIAN, MEDIAN, and BILATERAL
-	 */
-	enum BlurType{
-		BOX("Box Blur"), GAUSSIAN("Gaussian Blur"), MEDIAN("Median Filter"),
-			BILATERAL("Bilateral Filter");
-
-		private final String label;
-
-		BlurType(String label) {
-			this.label = label;
-		}
-
-		public static BlurType get(String type) {
-			if (BILATERAL.label.equals(type)) {
-				return BILATERAL;
-			}
-			else if (GAUSSIAN.label.equals(type)) {
-			return GAUSSIAN;
-			}
-			else if (MEDIAN.label.equals(type)) {
-				return MEDIAN;
-			}
-			else {
-				return BOX;
-			}
-		}
-
-		@Override
-		public String toString() {
-			return this.label;
-		}
-	}
-
-	/**
-	 * Softens an image using one of several filters.
-	 * @param input The image on which to perform the blur.
-	 * @param type The blurType to perform.
-	 * @param doubleRadius The radius for the blur.
-	 * @param output The image in which to store the output.
-	 */
-	private void blur(Mat input, BlurType type, double doubleRadius,
-		Mat output) {
-		int radius = (int)(doubleRadius + 0.5);
-		int kernelSize;
-		switch(type){
-			case BOX:
-				kernelSize = 2 * radius + 1;
-				Imgproc.blur(input, output, new Size(kernelSize, kernelSize));
-				break;
-			case GAUSSIAN:
-				kernelSize = 6 * radius + 1;
-				Imgproc.GaussianBlur(input,output, new Size(kernelSize, kernelSize), radius);
-				break;
-			case MEDIAN:
-				kernelSize = 2 * radius + 1;
-				Imgproc.medianBlur(input, output, kernelSize);
-				break;
-			case BILATERAL:
-				Imgproc.bilateralFilter(input, output, -1, radius, radius);
-				break;
-		}
-	}
 
 	/**
 	 * Segment an image based on hue, saturation, and value ranges.
@@ -197,29 +104,6 @@ public class GripPipeline {
 		}
 		int method = Imgproc.CHAIN_APPROX_SIMPLE;
 		Imgproc.findContours(input, contours, hierarchy, mode, method);
-	}
-
-	/**
-	 * Compute the convex hulls of contours.
-	 * @param inputContours The contours on which to perform the operation.
-	 * @param outputContours The contours where the output will be stored.
-	 */
-	private void convexHulls(List<MatOfPoint> inputContours,
-		ArrayList<MatOfPoint> outputContours) {
-		final MatOfInt hull = new MatOfInt();
-		outputContours.clear();
-		for (int i = 0; i < inputContours.size(); i++) {
-			final MatOfPoint contour = inputContours.get(i);
-			final MatOfPoint mopHull = new MatOfPoint();
-			Imgproc.convexHull(contour, hull);
-			mopHull.create((int) hull.size().height, 1, CvType.CV_32SC2);
-			for (int j = 0; j < hull.size().height; j++) {
-				int index = (int) hull.get(j, 0)[0];
-				double[] point = new double[] {contour.get(index, 0)[0], contour.get(index, 0)[1]};
-				mopHull.put(j, 0, point);
-			}
-			outputContours.add(mopHull);
-		}
 	}
 
 
