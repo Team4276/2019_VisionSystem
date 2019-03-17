@@ -63,7 +63,6 @@ public class Main {
 	private static Thread m_gripThread = null;
 	private static Thread m_textThread = null;
 	private static Thread m_streamThread = null;
-	private static long timeLastFrame = 0;
 
 	private static int nSequence = 0;
 
@@ -122,8 +121,7 @@ public class Main {
                 }
             }
         });
-
-
+        
 
 		// Connect NetworkTables, and get access to the publishing table
 		NetworkTable.setClientMode();
@@ -187,11 +185,14 @@ public class Main {
 			imageSink = new CvSink("CV Image Grabber");
 			imageSink.setSource(camera);
 		}
-
+        
 		// Infinitely process image
+		long lPreviousFrameTime = System.nanoTime();
+		long lCurrentFrameTime = System.nanoTime();
 		int type = CvType.CV_8UC3;
 		Mat inputImage = new Mat(FRAME_HEIGHT, FRAME_WIDTH, type);
 		while (!isShuttingDown) {
+			long lTime = System.nanoTime();
 			if (useSingleJpegInseadOfCamera) {
 				inputImage = Imgcodecs
 						.imread("/home/pi/cam170_rocket_00deg_06ft_edit.JPG");
@@ -202,9 +203,14 @@ public class Main {
 				// Just skip and continue
 				long frameTime = imageSink.grabFrame(inputImage);
 				if (frameTime == 0) {
+					System.out.println("Frame time = zero error\n");
 					continue;
 				}
 			}
+			lCurrentFrameTime = System.nanoTime();
+			long timeWaitingForFrame = TestMonitor.getDeltaTimeMilliseconds(lTime, lCurrentFrameTime);
+			long timeSinceLast = TestMonitor.getDeltaTimeMilliseconds(lPreviousFrameTime, lCurrentFrameTime);
+			lPreviousFrameTime = lCurrentFrameTime;
 
 			JVideoFrame frm = myFrameQueue_FREE.removeHead();
 			if (frm == null) {
@@ -240,17 +246,16 @@ public class Main {
 
 			frm.m_targetInfo.init();
 			frm.m_targetInfo.nSequence = Main.nSequence++;
-
-			if (0 == (frm.m_targetInfo.nSequence % 50)) {
+			
+			frm.m_targetInfo.timeWaitingForFrameFromCameraMilliseconds = timeWaitingForFrame;
+			frm.m_targetInfo.timeSinceLastCameraFrameMilliseconds = timeSinceLast;
+ 
+			if (0 == (frm.m_targetInfo.nSequence % TestMonitor.NUMBER_OF_TIME_IN_TASK)) {
 				m_testMonitor.displayQueueLengths();
 			}
 
 			frm.m_frame = inputImage;
-			if(timeLastFrame != 0)
-			{
-				frm.m_targetInfo.timeSinceLastCameraFrameMilliseconds = (System.nanoTime() - timeLastFrame)/1000000;
-			}
-			timeLastFrame = System.nanoTime();
+
 			myFrameQueue_WAIT_FOR_BLOB_DETECT.addTail(frm);
 		}
 	}

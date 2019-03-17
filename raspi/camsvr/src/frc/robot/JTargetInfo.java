@@ -46,8 +46,10 @@ public class JTargetInfo {
 	public double visionPixelX;
 	
 	public int nSequence;
-	public long timeSinceLastCameraFrameMilliseconds;
-	public long timeLatencyThisCameraFrameMilliseconds;
+	public long timeSinceLastCameraFrameMilliseconds; // Sampled right after frame is received
+	public long timeWaitingForFrameFromCameraMilliseconds; 
+	public long timeLatencyAddedForProcessingThisCameraFrameMilliseconds;  // Total for all of the GRIP thread
+	public long timeLatencyAddedForGripMilliseconds;  // Subset of the above - just the GRIP pipeline
 
 	int commaPos;
 	String word;
@@ -63,7 +65,9 @@ public class JTargetInfo {
 		isCargoBayDetected = 0;
 		visionPixelX = 0.0;
 		timeSinceLastCameraFrameMilliseconds = 0;
-		timeLatencyThisCameraFrameMilliseconds = 0;
+		timeWaitingForFrameFromCameraMilliseconds = 0;
+		timeLatencyAddedForProcessingThisCameraFrameMilliseconds = 0;
+		timeLatencyAddedForGripMilliseconds = 0;
 
 		commaPos = 0;
 		word = "";
@@ -89,7 +93,9 @@ public class JTargetInfo {
 		visionPixelX = Double.parseDouble(items.get(idx++));
 		nSequence = Integer.parseInt(items.get(idx++));
 		timeSinceLastCameraFrameMilliseconds = Integer.parseInt(items.get(idx++));
-		timeLatencyThisCameraFrameMilliseconds = Integer.parseInt(items.get(idx++));
+		timeWaitingForFrameFromCameraMilliseconds = Integer.parseInt(items.get(idx++));
+		timeLatencyAddedForProcessingThisCameraFrameMilliseconds = Integer.parseInt(items.get(idx++));
+		timeLatencyAddedForGripMilliseconds = Integer.parseInt(items.get(idx++));
 	}
 
 	public String numberToText() {
@@ -97,13 +103,15 @@ public class JTargetInfo {
 		s += Double.toString(visionPixelX) + ",";
 		s += Integer.toString(nSequence) + ",";
 		s += Long.toString(timeSinceLastCameraFrameMilliseconds) + ",";
-		s += Long.toString(timeLatencyThisCameraFrameMilliseconds) + ",";
+		s += Long.toString(timeWaitingForFrameFromCameraMilliseconds) + ",";
+		s += Long.toString(timeLatencyAddedForProcessingThisCameraFrameMilliseconds) + ",";
+		s += Long.toString(timeLatencyAddedForGripMilliseconds) + ",";
 		return s;
 	}
 
 	public String displayText() {
 		String str = "Seq: " + nSequence + "  Time Since Last Frame: " + timeSinceLastCameraFrameMilliseconds + "ms.\n";
-		str += "Latency This Frame: " + timeSinceLastCameraFrameMilliseconds + "ms.\n";
+		str += "Latency This Frame: " + timeLatencyAddedForProcessingThisCameraFrameMilliseconds + "ms.\n";
 		if (isCargoBayDetected != 0) {
 			str += "X Pixel: " + visionPixelX + "\n";
 		} else {

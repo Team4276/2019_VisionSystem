@@ -161,14 +161,18 @@ public class QGripThreadRunnable implements Runnable {
 			// distCoeffs);
 			frm.m_filteredFrame = frm.m_frame;
 
-			frm.m_targetInfo.isCargoBayDetected = false;
+			frm.m_targetInfo.isCargoBayDetected = 0;
+			
+			long lTime = System.nanoTime();
 			myGripPipeline.process(frm.m_frame);
+			frm.m_targetInfo.timeLatencyAddedForGripMilliseconds = TestMonitor.getDeltaTimeMilliseconds(lTime, System.nanoTime());
+			
 			ArrayList<MatOfPoint> contours = myGripPipeline.findContoursOutput();
 
 			if (!contours.isEmpty()) {
 				myCargoBayFinder.initFromContours(contours);
 				if (myCargoBayFinder.m_nValidCargoBay > 0) {
-					frm.m_targetInfo.isCargoBayDetected = true;
+					frm.m_targetInfo.isCargoBayDetected = 1;
 					frm.m_targetInfo.visionPixelX = myCargoBayFinder.m_foundCargoBays[0].centerX();
 				}
 			}
@@ -177,7 +181,7 @@ public class QGripThreadRunnable implements Runnable {
 			double Y = Main.IGNORE_ABOVE_THIS_Y_PIXEL;
 			drawMinus(frm.m_filteredFrame, X, Y, 20, colorGreen);
 
-			if (frm.m_targetInfo.isCargoBayDetected) {
+			if (0 != frm.m_targetInfo.isCargoBayDetected) {
 				drawRect(frm.m_filteredFrame, myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft, colorCyan, colorWhite);
 				drawRect(frm.m_filteredFrame, myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectRight, colorCyan, colorWhite);
 
@@ -204,7 +208,8 @@ public class QGripThreadRunnable implements Runnable {
 				Main.m_testMonitor.saveFrameToJpeg(frm.m_frame);
 			}
 			
-			frm.m_targetInfo.timeLatencyThisCameraFrameMilliseconds = System.nanoTime() - frm.m_timeAddedToQueue[JFrameQueueType.WAIT_FOR_BLOB_DETECT.toInt()];			
+			frm.m_targetInfo.timeLatencyAddedForProcessingThisCameraFrameMilliseconds = TestMonitor.getDeltaTimeMilliseconds(frm.m_timeAddedToQueue[JFrameQueueType.WAIT_FOR_BLOB_DETECT.toInt()], System.nanoTime());
+
 			Main.m_testMonitor.addStat(frm);
 
 			Main.myFrameQueue_WAIT_FOR_TEXT_CLIENT.addTail(frm);

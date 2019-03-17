@@ -32,7 +32,6 @@ package frc.robot;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 
 import org.opencv.core.Mat;
@@ -53,7 +52,9 @@ public class TestMonitor {
 	long m_timeStartBatch = System.nanoTime();
 	long m_nFramesDroppedAsOfLastBatch = 0;
 	long m_avgTimeBetweenFrames = 0;
+	long m_avgTimeWaitingForCamera = 0;
 	long m_avgLatencyBeforeShipTextMessage = 0;
+	long m_avgLatencyJustForGRIP = 0;
 	
 	TestMonitor()
 	{
@@ -151,14 +152,17 @@ public class TestMonitor {
 	    return dTemp;
 	}
 	
-	long getDeltaTimeMilliseconds(long timeStart, long timeEnd)
+	static long getDeltaTimeMilliseconds(long timeStart, long timeEnd)
 	{
-		return (timeEnd - timeStart) / (1000*1000);
+		long tDelta = timeEnd - timeStart;
+		return (tDelta / (1000*1000));
 	}
 	
 	void addStat(JVideoFrame frm) {
 		m_avgTimeBetweenFrames += frm.m_targetInfo.timeSinceLastCameraFrameMilliseconds;
-		m_avgLatencyBeforeShipTextMessage += frm.m_targetInfo.timeLatencyThisCameraFrameMilliseconds;
+		m_avgTimeWaitingForCamera += frm.m_targetInfo.timeWaitingForFrameFromCameraMilliseconds;
+		m_avgLatencyBeforeShipTextMessage += frm.m_targetInfo.timeLatencyAddedForProcessingThisCameraFrameMilliseconds;
+		m_avgLatencyJustForGRIP += frm.m_targetInfo.timeLatencyAddedForGripMilliseconds;
 	}
 	
 	void displayQueueLengths()
@@ -193,9 +197,13 @@ public class TestMonitor {
 		System.out.printf("timeThisBatch = %d ms.   timePerFrame = %d ms.\n", timeDeltaMillisecs, avgPerFrame);
 		m_timeStartBatch = System.nanoTime();
 		
-		System.out.printf("avgTimeSinceLastCameraFrame = %d ms.   avgLatencyBeforeShipTextMessage = %d ms.\n", m_avgTimeBetweenFrames/(NUMBER_OF_TIME_IN_TASK*1000000), m_avgLatencyBeforeShipTextMessage/(NUMBER_OF_TIME_IN_TASK*1000000));		
+		System.out.printf("avgTimeSinceLastCameraFrame = %d ms.   avgLatencyBeforeShipTextMessage = %d ms.\n", m_avgTimeBetweenFrames/NUMBER_OF_TIME_IN_TASK, m_avgLatencyBeforeShipTextMessage/NUMBER_OF_TIME_IN_TASK);		
 		m_avgTimeBetweenFrames = 0;
 		m_avgLatencyBeforeShipTextMessage = 0;
+		
+		System.out.printf("avgTimeWaitingForCamera = %d ms.   avgLatencyJustForGRIP = %d ms.\n", m_avgTimeWaitingForCamera/NUMBER_OF_TIME_IN_TASK, m_avgLatencyJustForGRIP/NUMBER_OF_TIME_IN_TASK);		
+		m_avgTimeWaitingForCamera = 0;
+		m_avgLatencyJustForGRIP = 0;
 	}
 
 	String padString(String str, int desiredLength)
