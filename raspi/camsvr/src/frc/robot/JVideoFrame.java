@@ -38,6 +38,7 @@ public class JVideoFrame {
 	long[] m_timeAddedToQueue = new long[JFrameQueueType.values().length];
 	long[] m_timeRemovedFromQueue = new long[JFrameQueueType.values().length];
 	JTargetInfo m_targetInfo;
+	JTargetAnnotation m_targetAnnotation;
 
 	JVideoFrame() {
 		init();
@@ -50,6 +51,14 @@ public class JVideoFrame {
 		}
 		m_targetInfo = new JTargetInfo();
 		m_targetInfo.init();
+
+		if(m_targetAnnotation != null)
+		{
+			m_targetAnnotation = null;
+		}
+		m_targetAnnotation = new JTargetAnnotation();
+		m_targetAnnotation.init();
+
 		for (int i = 0; i < JFrameQueueType.values().length; i++) {
 			m_timeAddedToQueue[i] = 0;
 			m_timeRemovedFromQueue[i] = 0;

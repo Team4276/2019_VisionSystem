@@ -41,10 +41,6 @@ public class QStreamThreadRunnable implements Runnable {
 		CvSource imageSource = new CvSource("CV Image Source", VideoMode.PixelFormat.kMJPEG, Main.FRAME_WIDTH,
 				Main.FRAME_HEIGHT, 30);
 
-		// This creates a CvSource to use. This will take in a Mat image that
-		// has had
-		// OpenCV operations
-		// operations
 		MjpegServer cvStream = new MjpegServer("CV Image Stream", JTargetInfo.streamAnnotatedSourcePortOnRaspberryPi);
 		cvStream.setSource(imageSource);
 
@@ -53,6 +49,9 @@ public class QStreamThreadRunnable implements Runnable {
 			if (frm == null) {
 				continue;
 			}
+			
+			frm.m_targetAnnotation.drawAnnotation(frm.m_filteredFrame);
+			
 			imageSource.putFrame(frm.m_filteredFrame);
 
 			Main.myFrameQueue_FREE.addTail(frm);

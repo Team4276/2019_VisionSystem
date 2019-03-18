@@ -177,6 +177,7 @@ public class Main {
 			camera.setResolution(640, 480);
 			camera.setFPS(30);
 			camera.setExposureManual(25);
+			camera.setWhiteBalanceHoldCurrent();
 
 			// This creates a CvSink for us to use. This grabs images from our
 			// selected
@@ -253,6 +254,8 @@ public class Main {
 			if (0 == (frm.m_targetInfo.nSequence % TestMonitor.NUMBER_OF_TIME_IN_TASK)) {
 				m_testMonitor.displayQueueLengths();
 			}
+			
+			frm.m_targetAnnotation.init();
 
 			frm.m_frame = inputImage;
 

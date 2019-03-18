@@ -37,7 +37,6 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
-import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
@@ -46,37 +45,6 @@ public class QGripThreadRunnable implements Runnable {
 	public boolean isShuttingDown = false;
 	private static GripPipeline myGripPipeline = null;
 	private static CargoBayFinder myCargoBayFinder = null;
-
-	private static void drawRect(Mat img, RotatedRect rotRect, Scalar clrRect, Scalar clrText)
-	{
-		Point rect_points[] = new Point[4];
-		rotRect.points(rect_points);
-		int j = 0;
-		for (j = 0; j < 4; j++) {
-			Imgproc.line(img, rect_points[j], rect_points[(j + 1) % 4], clrRect, 2);
-		}
-		double tiltAngle = CargoBayFinder.tilt(rotRect);
-		Integer iTemp = new Integer((int)tiltAngle);		
-		Imgproc.putText(img, iTemp.toString(), rotRect.center, Core.FONT_HERSHEY_PLAIN, 1.0, clrText);
-	}
-	
-	private static void drawPlus(Mat img, double X, double Y, Scalar clr)
-	{
-		Point pointLeft = new Point((int) X - 10, (int) Y);
-		Point pointRight = new Point((int) X + 10, (int) Y);
-		Imgproc.line(img, pointLeft, pointRight, clr, 3);
-		Point pointUp = new Point((int) X, (int) Y + 10);
-		Point pointDown = new Point((int) X, (int) Y - 10);
-		Imgproc.line(img, pointUp, pointDown, clr, 3);
-	}
-	
-	private static void drawMinus(Mat img, double X, double Y, double len, Scalar clr)
-	{
-		Point pointLeft = new Point((int) X, Y);
-		Point pointRight = new Point((int) X + len, (int) Y);
-		Imgproc.line(img, pointLeft, pointRight, clr, 3);
-	}
-
 	
 	@Override
 	public void run() {
@@ -97,13 +65,6 @@ public class QGripThreadRunnable implements Runnable {
 		Mat distCoeffs = new Mat(1, 5, CvType.CV_64FC1);
 		distCoeffs.put(row, col, dDist);
 
-		Scalar colorRed = new Scalar(0, 0, 255);
-		Scalar colorBlue = new Scalar(255, 0, 0);
-		Scalar colorYellow = new Scalar(0, 255, 255);
-		Scalar colorOrange = new Scalar(0, 192, 192);
-		Scalar colorCyan = new Scalar(255, 255, 0);
-		Scalar colorWhite = new Scalar(255, 255, 255);
-		Scalar colorGreen = new Scalar(0, 255, 0);
 		int iCount = 0;
 
 		while (!Main.isShuttingDown) {
@@ -173,34 +134,13 @@ public class QGripThreadRunnable implements Runnable {
 				myCargoBayFinder.initFromContours(contours);
 				if (myCargoBayFinder.m_nValidCargoBay > 0) {
 					frm.m_targetInfo.isCargoBayDetected = 1;
-					frm.m_targetInfo.visionPixelX = myCargoBayFinder.m_foundCargoBays[0].centerX();
+					frm.m_targetInfo.visionPixelX = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].centerX();
+					
+					frm.m_targetAnnotation.m_isCargoBayDetected = (0 != frm.m_targetInfo.isCargoBayDetected);
+					frm.m_targetAnnotation.m_visionPixelX = frm.m_targetInfo.visionPixelX;
+					frm.m_targetAnnotation.m_rectLeft = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft;
+					frm.m_targetAnnotation.m_rectRight = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectRight;
 				}
-			}
-			
-			double X = Main.FRAME_WIDTH - 20;
-			double Y = Main.IGNORE_ABOVE_THIS_Y_PIXEL;
-			drawMinus(frm.m_filteredFrame, X, Y, 20, colorGreen);
-
-			if (0 != frm.m_targetInfo.isCargoBayDetected) {
-				drawRect(frm.m_filteredFrame, myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft, colorCyan, colorWhite);
-				drawRect(frm.m_filteredFrame, myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectRight, colorCyan, colorWhite);
-
-				X = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].centerX();
-				Y = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].m_rectLeft.center.y;
-				drawPlus(frm.m_filteredFrame, X, Y, colorYellow);
-			} 
-			else
-			{
-				if(0 == (iCount++ % 50))
-				{
-					System.out.printf("\n");
-				}
-				System.out.printf(".");
-				//myCargoBayFinder.displayText();
-				//for(int i=0; i<myCargoBayFinder.m_nValidRect; i++)
-				//{
-				//	drawRect(frm.m_filteredFrame, myCargoBayFinder.m_leftToRightRectangles[i], colorRed, colorWhite);
-				//}
 			}
 
 			if ((frm.m_targetInfo.nSequence % 5) == 0) {
