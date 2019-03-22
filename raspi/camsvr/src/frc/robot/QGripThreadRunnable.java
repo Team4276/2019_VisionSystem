@@ -115,6 +115,9 @@ public class QGripThreadRunnable implements Runnable {
 			if (frm.m_filteredFrame == null) {
 				frm.m_filteredFrame = new Mat();
 			}
+			if (frm.m_resizedFrame == null) {
+				frm.m_resizedFrame = new Mat();
+			}
 
 			// Rasperry Pi not enough for undistort task
 			// At 30FPS queued 13 more frames before finished processing one frame

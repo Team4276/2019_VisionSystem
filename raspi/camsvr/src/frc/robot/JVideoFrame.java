@@ -35,6 +35,7 @@ import org.opencv.core.Mat;
 public class JVideoFrame {
 	Mat m_frame;
 	Mat m_filteredFrame;
+	Mat m_resizedFrame;
 	long[] m_timeAddedToQueue = new long[JFrameQueueType.values().length];
 	long[] m_timeRemovedFromQueue = new long[JFrameQueueType.values().length];
 	JTargetInfo m_targetInfo;

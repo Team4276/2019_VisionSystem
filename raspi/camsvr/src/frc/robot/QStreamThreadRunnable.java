@@ -30,16 +30,25 @@
 
 package frc.robot;
 
+import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
+
 import edu.wpi.cscore.CvSource;
 import edu.wpi.cscore.MjpegServer;
 import edu.wpi.cscore.VideoMode;
 
 public class QStreamThreadRunnable implements Runnable {
 
+	static final int BROWSER_FRAME_WIDTH = 320;
+	static final int BROWSER_FRAME_HEIGHT = 240;
+	static final int BROWSER_FRAME_RATE = 30;
+
+	private final org.opencv.core.Size m_sizeBrowserFrame = new org.opencv.core.Size(BROWSER_FRAME_WIDTH, BROWSER_FRAME_HEIGHT);
+	
 	@Override
 	public void run() {
-		CvSource imageSource = new CvSource("CV Image Source", VideoMode.PixelFormat.kMJPEG, Main.FRAME_WIDTH,
-				Main.FRAME_HEIGHT, 30);
+		CvSource imageSource = new CvSource("CV Image Source", VideoMode.PixelFormat.kMJPEG, BROWSER_FRAME_WIDTH,
+				BROWSER_FRAME_HEIGHT, BROWSER_FRAME_RATE);
 
 		MjpegServer cvStream = new MjpegServer("CV Image Stream", JTargetInfo.streamAnnotatedSourcePortOnRaspberryPi);
 		cvStream.setSource(imageSource);
@@ -51,8 +60,9 @@ public class QStreamThreadRunnable implements Runnable {
 			}
 			
 			frm.m_targetAnnotation.drawAnnotation(frm.m_filteredFrame);
-			
-			imageSource.putFrame(frm.m_filteredFrame);
+
+			Imgproc.resize( frm.m_filteredFrame, frm.m_resizedFrame, m_sizeBrowserFrame);
+			imageSource.putFrame(frm.m_resizedFrame);
 
 			Main.myFrameQueue_FREE.addTail(frm);
 		}
