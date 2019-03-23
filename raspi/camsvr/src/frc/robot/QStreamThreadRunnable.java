@@ -60,6 +60,9 @@ public class QStreamThreadRunnable implements Runnable {
 			}
 			
 			frm.m_targetAnnotation.drawAnnotation(frm.m_filteredFrame);
+			if ((frm.m_targetInfo.nSequence % 5) == 0) {
+				Main.m_testMonitor.saveFrameToJpeg(frm.m_filteredFrame);
+			}
 
 			Imgproc.resize( frm.m_filteredFrame, frm.m_resizedFrame, m_sizeBrowserFrame);
 			imageSource.putFrame(frm.m_resizedFrame);

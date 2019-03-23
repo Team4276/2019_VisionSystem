@@ -147,7 +147,6 @@ public class QGripThreadRunnable implements Runnable {
 			}
 
 			if ((frm.m_targetInfo.nSequence % 5) == 0) {
-				Main.m_testMonitor.saveFrameToJpeg(frm.m_filteredFrame);
 				Main.m_testMonitor.saveFrameToJpeg(frm.m_frame);
 			}
 			
