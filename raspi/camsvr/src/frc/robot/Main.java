@@ -54,7 +54,7 @@ public class Main {
 	private static Boolean useSingleJpegInseadOfCamera = false;
 	static final int FRAME_WIDTH = 640;
 	static final int FRAME_HEIGHT = 480;
-	static final int FRAME_CENTER_PIXEL_X = 280;
+	static final int FRAME_CENTER_PIXEL_X = 200;
 	static final int IGNORE_ABOVE_THIS_Y_PIXEL = (int)(0.45*FRAME_HEIGHT);
 
 	private static final int MAX_FRAMES = 32;
