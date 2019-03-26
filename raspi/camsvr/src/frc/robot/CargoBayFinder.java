@@ -159,6 +159,11 @@ public class CargoBayFinder {
 				{
 					continue;
 				}
+				
+				if(!areRectsTiltedTowardsEachOther(m_largestRectangles[i], m_largestRectangles[idxNext]))
+				{
+					continue;
+				}
 
 				m_foundCargoBays[m_nValidCargoBay++].set(m_largestRectangles[i], m_largestRectangles[idxNext]);
 				break; // Only collect one - looking from largest to smallest, and assume center is also largest due to fisheye

@@ -51,11 +51,11 @@ public class Main {
 
 	public static TestMonitor m_testMonitor = null;
 
-	private static Boolean useSingleJpegInseadOfCamera = false;
+	private static Boolean useJpegInseadOfCamera = true;
 	static final int FRAME_WIDTH = 640;
 	static final int FRAME_HEIGHT = 480;
 	static final int FRAME_CENTER_PIXEL_X = 200;
-	static final int IGNORE_ABOVE_THIS_Y_PIXEL = (int)(0.45*FRAME_HEIGHT);
+	static final int IGNORE_ABOVE_THIS_Y_PIXEL = (int)(0.35*FRAME_HEIGHT);
 
 	private static final int MAX_FRAMES = 32;
 
@@ -166,7 +166,7 @@ public class Main {
 
 		UsbCamera camera;
 		CvSink imageSink = null;
-		if (!useSingleJpegInseadOfCamera) {
+		if (!useJpegInseadOfCamera) {
 			camera = setUsbCamera(0, inputStream);
 
 			// USB Camera
@@ -188,15 +188,17 @@ public class Main {
 		}
         
 		// Infinitely process image
+        String jpegFolder = ("/home/pi/log/");
+
 		long lPreviousFrameTime = System.nanoTime();
 		long lCurrentFrameTime = System.nanoTime();
 		int type = CvType.CV_8UC3;
 		Mat inputImage = new Mat(FRAME_HEIGHT, FRAME_WIDTH, type);
 		while (!isShuttingDown) {
 			long lTime = System.nanoTime();
-			if (useSingleJpegInseadOfCamera) {
+			if (useJpegInseadOfCamera) {
 				inputImage = Imgcodecs
-						.imread("/home/pi/cam170_rocket_00deg_06ft_edit.JPG");
+						.imread("/home/pi/test/20190316-09172400001991.jpg");
 				// inputImage = Imgcodecs.imwrite("/home/pi/t.JPG", inputImage);
 			} else {
 				// Grab a frame. If it has a frame time of 0, there was an
