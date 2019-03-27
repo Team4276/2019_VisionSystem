@@ -30,6 +30,7 @@
 
 package frc.robot;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -51,20 +52,81 @@ public class Main {
 
 	public static TestMonitor m_testMonitor = null;
 
-	private static Boolean useJpegInseadOfCamera = true;
+	private enum ImageSourceType {
+		IMAGE_SOURCE_CAMERA,
+		IMAGE_SOURCE_SINGLE_JPEG,
+		IMAGE_SOURCE_JPEG_FOLDER
+	}
+	private static ImageSourceType m_imageSourceType = ImageSourceType.IMAGE_SOURCE_CAMERA;
+	
 	static final int FRAME_WIDTH = 640;
 	static final int FRAME_HEIGHT = 480;
 	static final int FRAME_CENTER_PIXEL_X = 200;
 	static final int IGNORE_ABOVE_THIS_Y_PIXEL = (int)(0.35*FRAME_HEIGHT);
 
 	private static final int MAX_FRAMES = 32;
-
+	
 	public static boolean isShuttingDown = false;
 	private static Thread m_gripThread = null;
 	private static Thread m_textThread = null;
 	private static Thread m_streamThread = null;
 
 	private static int nSequence = 0;
+	
+	public static long queueImage(Mat inputImage, long lPreviousFrameTime, long timeBeforeWaitForCamera) {
+		long lCurrentFrameTime = System.nanoTime();
+		long timeWaitingForFrame = TestMonitor.getDeltaTimeMilliseconds(timeBeforeWaitForCamera, lCurrentFrameTime);
+		long timeSinceLast = TestMonitor.getDeltaTimeMilliseconds(lPreviousFrameTime, lCurrentFrameTime);
+		lPreviousFrameTime = lCurrentFrameTime;
+
+		JVideoFrame frm = myFrameQueue_FREE.removeHead();
+		if (frm == null) {
+			// 'No free frames'
+			// Try to steal an old packet from one of the active queues
+			if (myFrameQueue_WAIT_FOR_BLOB_DETECT.size() > 1) {
+				frm = myFrameQueue_WAIT_FOR_BLOB_DETECT.removeHead();
+				if (frm != null) {
+					myFrameQueue_WAIT_FOR_BLOB_DETECT.m_droppedFrames++;
+				} else {
+					if (myFrameQueue_WAIT_FOR_TEXT_CLIENT.size() > 1) {
+						frm = myFrameQueue_WAIT_FOR_TEXT_CLIENT
+								.removeHead();
+						if (frm != null) {
+							myFrameQueue_WAIT_FOR_TEXT_CLIENT.m_droppedFrames++;
+						} else {
+							if (myFrameQueue_WAIT_FOR_BROWSER_CLIENT.size() > 1) {
+								frm = myFrameQueue_WAIT_FOR_BROWSER_CLIENT
+										.removeHead();
+								if (frm != null) {
+									myFrameQueue_WAIT_FOR_BROWSER_CLIENT.m_droppedFrames++;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		if (frm == null) {
+			System.out.printf("* RESOURCE LEAK -- no packets avalable\n");
+		} else {
+
+			frm.m_targetInfo.init();
+			frm.m_targetInfo.nSequence = Main.nSequence++;
+			
+			frm.m_targetInfo.timeWaitingForFrameFromCameraMilliseconds = timeWaitingForFrame;
+			frm.m_targetInfo.timeSinceLastCameraFrameMilliseconds = timeSinceLast;
+	
+			if (0 == (frm.m_targetInfo.nSequence % TestMonitor.NUMBER_OF_TIME_IN_TASK)) {
+				m_testMonitor.displayQueueLengths();
+			}
+			
+			frm.m_targetAnnotation.init();
+			frm.m_frame = inputImage;
+	
+			myFrameQueue_WAIT_FOR_BLOB_DETECT.addTail(frm);	
+		}
+		return lPreviousFrameTime;
+	}
 
 	public static void main(String[] args) throws FileNotFoundException, IOException {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -166,7 +228,7 @@ public class Main {
 
 		UsbCamera camera;
 		CvSink imageSink = null;
-		if (!useJpegInseadOfCamera) {
+		if(m_imageSourceType == ImageSourceType.IMAGE_SOURCE_CAMERA)  {
 			camera = setUsbCamera(0, inputStream);
 
 			// USB Camera
@@ -188,80 +250,47 @@ public class Main {
 		}
         
 		// Infinitely process image
-        String jpegFolder = ("/home/pi/log/");
-
-		long lPreviousFrameTime = System.nanoTime();
-		long lCurrentFrameTime = System.nanoTime();
+        String jpegFolder = ("/home/pi/test/");
 		int type = CvType.CV_8UC3;
 		Mat inputImage = new Mat(FRAME_HEIGHT, FRAME_WIDTH, type);
+		long lPreviousFrameTime = System.nanoTime();
 		while (!isShuttingDown) {
-			long lTime = System.nanoTime();
-			if (useJpegInseadOfCamera) {
-				inputImage = Imgcodecs
-						.imread("/home/pi/test/20190316-09172400001991.jpg");
-				// inputImage = Imgcodecs.imwrite("/home/pi/t.JPG", inputImage);
-			} else {
-				// Grab a frame. If it has a frame time of 0, there was an
-				// error.
-				// Just skip and continue
-				long frameTime = imageSink.grabFrame(inputImage);
-				if (frameTime == 0) {
-					System.out.println("Frame time = zero error\n");
-					continue;
-				}
-			}
-			lCurrentFrameTime = System.nanoTime();
-			long timeWaitingForFrame = TestMonitor.getDeltaTimeMilliseconds(lTime, lCurrentFrameTime);
-			long timeSinceLast = TestMonitor.getDeltaTimeMilliseconds(lPreviousFrameTime, lCurrentFrameTime);
-			lPreviousFrameTime = lCurrentFrameTime;
+			if(m_imageSourceType == ImageSourceType.IMAGE_SOURCE_JPEG_FOLDER) {
+			    File rootDir= new File(jpegFolder);
+			    File[] files = rootDir.listFiles();
 
-			JVideoFrame frm = myFrameQueue_FREE.removeHead();
-			if (frm == null) {
-				// 'No free frames'
-				// Try to steal an old packet from one of the active queues
-				if (myFrameQueue_WAIT_FOR_BLOB_DETECT.size() > 1) {
-					frm = myFrameQueue_WAIT_FOR_BLOB_DETECT.removeHead();
-					if (frm != null) {
-						myFrameQueue_WAIT_FOR_BLOB_DETECT.m_droppedFrames++;
-					} else {
-						if (myFrameQueue_WAIT_FOR_TEXT_CLIENT.size() > 1) {
-							frm = myFrameQueue_WAIT_FOR_TEXT_CLIENT
-									.removeHead();
-							if (frm != null) {
-								myFrameQueue_WAIT_FOR_TEXT_CLIENT.m_droppedFrames++;
-							} else {
-								if (myFrameQueue_WAIT_FOR_BROWSER_CLIENT.size() > 1) {
-									frm = myFrameQueue_WAIT_FOR_BROWSER_CLIENT
-											.removeHead();
-									if (frm != null) {
-										myFrameQueue_WAIT_FOR_BROWSER_CLIENT.m_droppedFrames++;
-									}
-								}
-							}
-						}
+			    for(File file :files) {
+					if(isShuttingDown) {
+						break;
+					}
+			        inputImage = Imgcodecs.imread(file.getAbsolutePath());
+					lPreviousFrameTime = queueImage(inputImage, lPreviousFrameTime, lPreviousFrameTime);
+					try {
+						Thread.sleep(500);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+			    }
+			}
+			else
+			{
+				long timeBeforeWaitForCamera = System.nanoTime();
+				if(m_imageSourceType == ImageSourceType.IMAGE_SOURCE_SINGLE_JPEG) {
+			        String src = jpegFolder + "20190316-09172400001991.jpg";
+					inputImage = Imgcodecs.imread(src);
+					// inputImage = Imgcodecs.imwrite("/home/pi/t.JPG", inputImage);
+				} else {
+					// Grab a frame from the camera. If it has a frame time of 0, there was an
+					// error.
+					// Just skip and continue
+					long frameTime = imageSink.grabFrame(inputImage);
+					if (frameTime == 0) {
+						System.out.println("Frame time = zero error\n");
+						continue;
 					}
 				}
+				lPreviousFrameTime = queueImage(inputImage, lPreviousFrameTime, timeBeforeWaitForCamera);
 			}
-			if (frm == null) {
-				System.out.printf("* RESOURCE LEAK -- no packets avalable\n");
-				continue;
-			}
-
-			frm.m_targetInfo.init();
-			frm.m_targetInfo.nSequence = Main.nSequence++;
-			
-			frm.m_targetInfo.timeWaitingForFrameFromCameraMilliseconds = timeWaitingForFrame;
-			frm.m_targetInfo.timeSinceLastCameraFrameMilliseconds = timeSinceLast;
- 
-			if (0 == (frm.m_targetInfo.nSequence % TestMonitor.NUMBER_OF_TIME_IN_TASK)) {
-				m_testMonitor.displayQueueLengths();
-			}
-			
-			frm.m_targetAnnotation.init();
-
-			frm.m_frame = inputImage;
-
-			myFrameQueue_WAIT_FOR_BLOB_DETECT.addTail(frm);
 		}
 	}
 
