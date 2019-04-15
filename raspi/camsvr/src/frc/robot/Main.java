@@ -57,7 +57,7 @@ public class Main {
 		IMAGE_SOURCE_SINGLE_JPEG,
 		IMAGE_SOURCE_JPEG_FOLDER
 	}
-	private static ImageSourceType m_imageSourceType = ImageSourceType.IMAGE_SOURCE_JPEG_FOLDER;
+	private static ImageSourceType m_imageSourceType = ImageSourceType.IMAGE_SOURCE_CAMERA;
 	
 	static final int FRAME_WIDTH = 640;
 	static final int FRAME_HEIGHT = 480;

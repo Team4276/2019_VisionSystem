@@ -9,7 +9,7 @@ import org.opencv.imgproc.Imgproc;
 
 public class JTargetAnnotation {
 	
-	public Boolean m_showDebugAnnotation = true;
+	public Boolean m_showDebugAnnotation = false;
 	
 	public Boolean m_isCargoBayDetected = false;  
 	public double m_visionPixelX = -1;
