@@ -134,7 +134,7 @@ public class QGripThreadRunnable implements Runnable {
 			ArrayList<MatOfPoint> contours = myGripPipeline.findContoursOutput();
 
 			if (!contours.isEmpty()) {
-				myCargoBayFinder.initFromContours(contours);
+				frm.m_targetAnnotation = myCargoBayFinder.initFromContours(contours);
 				if (myCargoBayFinder.m_nValidCargoBay > 0) {
 					frm.m_targetInfo.isCargoBayDetected = 1;
 					frm.m_targetInfo.visionPixelX = myCargoBayFinder.m_foundCargoBays[myCargoBayFinder.m_idxNearestCenterX].centerX();

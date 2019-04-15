@@ -120,9 +120,10 @@ public class CargoBayFinder {
 
 	}
 
-	public void initFromContours(ArrayList<MatOfPoint> contours) {
+	public JTargetAnnotation initFromContours(ArrayList<MatOfPoint> contours) {
 		init();
 
+		JTargetAnnotation retVal = new JTargetAnnotation();
 		int i;
 		for (i = 0; i < contours.size(); i++) {
 			MatOfPoint2f myMat2f = new MatOfPoint2f(contours.get(i).toArray());
@@ -131,7 +132,7 @@ public class CargoBayFinder {
 		}
 		if (m_nValidRect < 2) {
 			//System.out.printf("Need at least 2 rectangles, m_nValidRect = %d, nContours = %d\n", m_nValidRect, contours.size());
-			return;
+			return retVal;
 		}
 		sortLargestArea(m_largestRectangles, m_nValidRect);
 
@@ -145,9 +146,11 @@ public class CargoBayFinder {
 				if (area2 > 0) {
 					double ratio = area1 / area2;
 					if (ratio > (10.0 / 7.0)) {
+						retVal.m_tooBigRectangles[retVal.m_nTooBigRect++] = m_largestRectangles[i];
 						continue;
 					}
 					if (ratio < (0.7)) {
+						retVal.m_tooSmallRectangles[retVal.m_nTooSmallRect++] = m_largestRectangles[i];
 						continue;
 					}
 				}
@@ -157,18 +160,22 @@ public class CargoBayFinder {
 				double ht = Math.max(m_largestRectangles[i].size.height, m_largestRectangles[idxNext].size.height);
 				if(dist > (5*ht))
 				{
+					retVal.m_tooFarRectangles[retVal.m_nTooFarRect++] = m_largestRectangles[i];
 					continue;
 				}
 				
 				if(!areRectsTiltedTowardsEachOther(m_largestRectangles[i], m_largestRectangles[idxNext]))
 				{
+					retVal.m_badTiltRectangles[retVal.m_nBadTiltRect++] = m_largestRectangles[i];
 					continue;
-				}
-
+				}				
+				retVal.m_cargoBayRectangles[retVal.m_nCargoBayRect++] = m_largestRectangles[i];
+				retVal.m_cargoBayRectangles[retVal.m_nCargoBayRect++] = m_largestRectangles[idxNext];
 				m_foundCargoBays[m_nValidCargoBay++].set(m_largestRectangles[i], m_largestRectangles[idxNext]);
-				break; // Only collect one - looking from largest to smallest, and assume center is also largest due to fisheye
+				
 			}
 		}
+		return retVal;
 	}
 
 	public void displayText() {
