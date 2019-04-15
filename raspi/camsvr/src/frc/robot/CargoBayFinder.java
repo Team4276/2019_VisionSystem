@@ -52,6 +52,16 @@ public class CargoBayFinder {
 	int m_nValidRect = 0;
 	int m_nValidCargoBay = 0;
 	int m_idxNearestCenterX = 0;
+	
+	private static MatOfPoint2f myMat2f = new MatOfPoint2f();
+	
+	private static Comparator<RotatedRect> myAreaComparator = new Comparator<RotatedRect>() {
+		public int compare(final RotatedRect a, final RotatedRect b) {
+			Double c = Double.valueOf(a.size.width * a.size.height);
+			Double d = Double.valueOf(b.size.width * b.size.height);
+			return d.compareTo(c);
+		}
+	};
 
 	CargoBayFinder() {
 		m_largestRectangles = new RotatedRect[MAX_VISION_TARGETS];
@@ -126,7 +136,7 @@ public class CargoBayFinder {
 		JTargetAnnotation retVal = new JTargetAnnotation();
 		int i;
 		for (i = 0; i < contours.size(); i++) {
-			MatOfPoint2f myMat2f = new MatOfPoint2f(contours.get(i).toArray());
+			myMat2f.fromArray(contours.get(i).toArray());
 			RotatedRect rotRect = Imgproc.minAreaRect(myMat2f);
 			insertKeepingLargest(rotRect);
 		}
@@ -212,15 +222,9 @@ public class CargoBayFinder {
 		}
 		System.out.printf("\n");
 	}
-
+	
 	public static void sortLargestArea(RotatedRect[] a, int nValid) {
-		Arrays.sort(a, 0, nValid, new Comparator<RotatedRect>() {
-			public int compare(final RotatedRect a, final RotatedRect b) {
-				Double c = Double.valueOf(a.size.width * a.size.height);
-				Double d = Double.valueOf(b.size.width * b.size.height);
-				return d.compareTo(c);
-			}
-		});
+		Arrays.sort(a, 0, nValid, myAreaComparator);
 	}
 
 	public static void initRotatedRect(RotatedRect rotRect) {
